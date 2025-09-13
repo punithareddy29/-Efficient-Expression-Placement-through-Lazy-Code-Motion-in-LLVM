@@ -1,4 +1,4 @@
-# Make sure you are in your project's root directory (e.g., ~/Desktop/Project/)
+# Make sure you are in your project's root directory (e.g., ~/Desktop/Vinodh_Punitha/)
 # And that Tests/test7.c contains the C code.
 # Also ensure your UnifiedPass.so is in ./build/
 
@@ -33,6 +33,7 @@ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test7.mem2r
 # 8. Apply Custom LCM Pass to the -O1 (mem2reg) version
 echo "Running LCM on -O1 output..."
 opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test7.O1.mem2reg.bc -o Tests/test7.O1.lcm-final.ll
+
 
 
 
