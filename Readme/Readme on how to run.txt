@@ -12,10 +12,10 @@ The development and testing of the LCM pass were conducted in the following envi
 The implementation leverages LLVM's C++ APIs and integrates with its New Pass Manager (NPM) via a dynamically loaded plugin.
 
 Install LLVM 17.0.6 if not installed yet.(follow the instruction as per the (Installing LLVM 17.0.6.txt) file uploaded in the same directory)
-In the VM, Move the folder Vinod_Punitha to the desktop.
+In the VM, Move the folder Project to the desktop.
 
 # First, go back to the project root directory
-cd ~/Desktop/Vinodh_Punitha/
+cd ~/Desktop/Project/
 
 # Remove any existing build directory to start fresh
 rm -rf build
@@ -339,4 +339,5 @@ make clean && make
 cd ..
 
 opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test6.mem2reg.bc -o Tests/test6.lcm-E.ll
+
 
