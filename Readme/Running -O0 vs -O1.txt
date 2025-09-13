@@ -1,4 +1,4 @@
-# Make sure you are in your project's root directory (e.g., ~/Desktop/Vinodh_Punitha/)
+# Make sure you are in your project's root directory (e.g., ~/Desktop/Punitha/)
 # And that Tests/test7.c contains the C code.
 # Also ensure your UnifiedPass.so is in ./build/
 
