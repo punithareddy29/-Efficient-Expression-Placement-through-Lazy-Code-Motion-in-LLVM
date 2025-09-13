@@ -1,0 +1,18 @@
+Delete the source and build folder:
+# Delete the source and build folder
+rm -rf ~/llvm-project
+
+# Remove the PATH modification from .bashrc
+nano ~/.bashrc
+# (Find and delete this line: export PATH=$PATH:/home/vboxuser/llvm-project/build/bin)
+# Save and exit (Ctrl+O, Enter, then Ctrl+X)
+
+# Apply changes
+source ~/.bashrc
+
+# Verify removal
+which clang
+# Should show nothing or system default
+
+
+You should now see nothing. Close and open the terminal.

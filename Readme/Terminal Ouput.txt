@@ -1,0 +1,5176 @@
+vboxuser@ubuntu:~$ cd ~/Desktop/Vinodh_Punitha/
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ mkdir -p build
+cd build
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha/build$ cmake ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha/build$ make
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha/build$ cd ..
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$
+
+# To perform LCM On the test csase. 
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ clang-17 -fno-discard-value-names -Xclang -disable-O0-optnone -O0 -emit-llvm -c Tests/test.c -o Tests/test.O0.no-optnone.bc
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -passes=mem2reg Tests/test.O0.no-optnone.bc -o Tests/test.mem2reg.bc
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ llvm-dis-17 Tests/test.mem2reg.bc -o Tests/test.mem2reg.ll
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test.mem2reg.bc -o Tests/test.lcm-final.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: bar
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: a - b
+  2: a * b
+  3: x.0 * y.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	
+  In	
+  Out	a + b
+---
+Basic Block if.then
+  gen	a + b, a - b
+  kill	
+  In	a + b
+  Out	a + b, a - b
+---
+Basic Block if.else
+  gen	a * b
+  kill	
+  In	a + b
+  Out	a + b, a * b
+---
+Basic Block if.end
+  gen	a + b, x.0 * y.0
+  kill	
+  In	a + b
+  Out	a + b, x.0 * y.0
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: bar
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: a - b
+  2: a * b
+  3: x.0 * y.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	
+  In	a + b, x.0 * y.0
+  Out	a + b, x.0 * y.0
+---
+Basic Block if.then
+  gen	a + b, a - b
+  kill	
+  In	a + b, a - b, x.0 * y.0
+  Out	a + b, x.0 * y.0
+---
+Basic Block if.else
+  gen	a * b
+  kill	
+  In	a + b, a * b, x.0 * y.0
+  Out	a + b, x.0 * y.0
+---
+Basic Block if.end
+  gen	a + b, x.0 * y.0
+  kill	
+  In	a + b, x.0 * y.0
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: bar
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: a - b
+  2: a * b
+  3: x.0 * y.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	a + b
+  In	a - b, a * b
+  Out	a - b, a * b
+---
+Basic Block if.then
+  gen	
+  kill	a + b, a - b
+  In	a * b
+  Out	a - b, a * b
+---
+Basic Block if.else
+  gen	
+  kill	a * b
+  In	a - b
+  Out	a - b, a * b
+---
+Basic Block if.end
+  gen	a - b, a * b
+  kill	a + b, x.0 * y.0
+  In	a - b, a * b
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Latest Mode)...
+  Inserted:   %lcm.tmp = add i32 %a, %b into entry
+  Inserted:   %lcm.tmp1 = sub i32 %a, %b into entry
+  Inserted:   %lcm.tmp2 = mul i32 %a, %b into entry
+  Skipped Insertion (Dominance): x.0 * y.0 in entry
+  Inserted:   %lcm.tmp3 = sub i32 %a, %b into if.then
+  Skipped Insertion (Dominance): x.0 * y.0 in if.then
+  Inserted:   %lcm.tmp4 = mul i32 %a, %b into if.else
+  Skipped Insertion (Dominance): x.0 * y.0 in if.else
+  Inserted:   %lcm.tmp5 = mul i32 %x.0, %y.0 into if.end
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : a + b
+    ANTIC_IN : a + b, x.0 * y.0
+      Checking Expr 0 [a + b]: ANTIC=1, AVAIL=1
+      Checking Expr 1 [a - b]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [a * b]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [x.0 * y.0]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 3 [x.0 * y.0]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then
+            Pred P has multiple successors? No
+  Finished Checking Block: if.end
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %mul3 = mul nsw i32 %x.0, %y.0 ->   %lcm.tmp5 = mul i32 %x.0, %y.0
+  Marking replacement:   %add = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %mul = mul nsw i32 %a, %b ->   %lcm.tmp2 = mul i32 %a, %b
+  Marking replacement:   %add2 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %sub = sub nsw i32 %a, %b ->   %lcm.tmp1 = sub i32 %a, %b
+  Marking replacement:   %add1 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %x.0 = phi i32 [ %sub, %if.then ], [ %add, %if.else ] (%sub -> %lcm.tmp1)
+  Replacing operand 1 of:   %x.0 = phi i32 [ %lcm.tmp1, %if.then ], [ %add, %if.else ] (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %y.0 = phi i32 [ %add1, %if.then ], [ %mul, %if.else ] (%add1 -> %lcm.tmp)
+  Replacing operand 1 of:   %y.0 = phi i32 [ %lcm.tmp, %if.then ], [ %mul, %if.else ] (%mul -> %lcm.tmp2)
+  Replacing operand 0 of:   ret i32 %mul3 (%mul3 -> %lcm.tmp5)
+  Deleting dead instructions...
+    Deleting:   %mul3 = mul nsw i32 %x.0, %y.0
+    Deleting:   %add = add nsw i32 %a, %b
+    Deleting:   %mul = mul nsw i32 %a, %b
+    Deleting:   %add2 = add nsw i32 %a, %b
+    Deleting:   %sub = sub nsw i32 %a, %b
+    Deleting:   %add1 = add nsw i32 %a, %b
+  Deleted 6 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ 
+
+
+#To perform LCM-L and LCM-E
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test.mem2reg.bc -o Tests/test.lcm-L.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: bar
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: a - b
+  2: a * b
+  3: x.0 * y.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	
+  In	
+  Out	a + b
+---
+Basic Block if.then
+  gen	a + b, a - b
+  kill	
+  In	a + b
+  Out	a + b, a - b
+---
+Basic Block if.else
+  gen	a * b
+  kill	
+  In	a + b
+  Out	a + b, a * b
+---
+Basic Block if.end
+  gen	a + b, x.0 * y.0
+  kill	
+  In	a + b
+  Out	a + b, x.0 * y.0
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: bar
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: a - b
+  2: a * b
+  3: x.0 * y.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	
+  In	a + b, x.0 * y.0
+  Out	a + b, x.0 * y.0
+---
+Basic Block if.then
+  gen	a + b, a - b
+  kill	
+  In	a + b, a - b, x.0 * y.0
+  Out	a + b, x.0 * y.0
+---
+Basic Block if.else
+  gen	a * b
+  kill	
+  In	a + b, a * b, x.0 * y.0
+  Out	a + b, x.0 * y.0
+---
+Basic Block if.end
+  gen	a + b, x.0 * y.0
+  kill	
+  In	a + b, x.0 * y.0
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: bar
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: a - b
+  2: a * b
+  3: x.0 * y.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	a + b
+  In	a - b, a * b
+  Out	a - b, a * b
+---
+Basic Block if.then
+  gen	
+  kill	a + b, a - b
+  In	a * b
+  Out	a - b, a * b
+---
+Basic Block if.else
+  gen	
+  kill	a * b
+  In	a - b
+  Out	a - b, a * b
+---
+Basic Block if.end
+  gen	a - b, a * b
+  kill	a + b, x.0 * y.0
+  In	a - b, a * b
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Latest Mode)...
+  Inserted:   %lcm.tmp = add i32 %a, %b into entry
+  Inserted:   %lcm.tmp1 = sub i32 %a, %b into entry
+  Inserted:   %lcm.tmp2 = mul i32 %a, %b into entry
+  Skipped Insertion (Dominance): x.0 * y.0 in entry
+  Inserted:   %lcm.tmp3 = sub i32 %a, %b into if.then
+  Skipped Insertion (Dominance): x.0 * y.0 in if.then
+  Inserted:   %lcm.tmp4 = mul i32 %a, %b into if.else
+  Skipped Insertion (Dominance): x.0 * y.0 in if.else
+  Inserted:   %lcm.tmp5 = mul i32 %x.0, %y.0 into if.end
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : a + b
+    ANTIC_IN : a + b, x.0 * y.0
+      Checking Expr 0 [a + b]: ANTIC=1, AVAIL=1
+      Checking Expr 1 [a - b]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [a * b]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [x.0 * y.0]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 3 [x.0 * y.0]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then
+            Pred P has multiple successors? No
+  Finished Checking Block: if.end
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %sub = sub nsw i32 %a, %b ->   %lcm.tmp1 = sub i32 %a, %b
+  Marking replacement:   %add2 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %add1 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %mul3 = mul nsw i32 %x.0, %y.0 ->   %lcm.tmp5 = mul i32 %x.0, %y.0
+  Marking replacement:   %add = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %mul = mul nsw i32 %a, %b ->   %lcm.tmp2 = mul i32 %a, %b
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %x.0 = phi i32 [ %sub, %if.then ], [ %add, %if.else ] (%sub -> %lcm.tmp1)
+  Replacing operand 1 of:   %x.0 = phi i32 [ %lcm.tmp1, %if.then ], [ %add, %if.else ] (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %y.0 = phi i32 [ %add1, %if.then ], [ %mul, %if.else ] (%add1 -> %lcm.tmp)
+  Replacing operand 1 of:   %y.0 = phi i32 [ %lcm.tmp, %if.then ], [ %mul, %if.else ] (%mul -> %lcm.tmp2)
+  Replacing operand 0 of:   ret i32 %mul3 (%mul3 -> %lcm.tmp5)
+  Deleting dead instructions...
+    Deleting:   %sub = sub nsw i32 %a, %b
+    Deleting:   %add2 = add nsw i32 %a, %b
+    Deleting:   %add1 = add nsw i32 %a, %b
+    Deleting:   %mul3 = mul nsw i32 %x.0, %y.0
+    Deleting:   %add = add nsw i32 %a, %b
+    Deleting:   %mul = mul nsw i32 %a, %b
+  Deleted 6 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test.mem2reg.bc -o Tests/test.lcm-E.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: bar
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: a - b
+  2: a * b
+  3: x.0 * y.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	
+  In	
+  Out	a + b
+---
+Basic Block if.then
+  gen	a + b, a - b
+  kill	
+  In	a + b
+  Out	a + b, a - b
+---
+Basic Block if.else
+  gen	a * b
+  kill	
+  In	a + b
+  Out	a + b, a * b
+---
+Basic Block if.end
+  gen	a + b, x.0 * y.0
+  kill	
+  In	a + b
+  Out	a + b, x.0 * y.0
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: bar
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: a - b
+  2: a * b
+  3: x.0 * y.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	
+  In	a + b, x.0 * y.0
+  Out	a + b, x.0 * y.0
+---
+Basic Block if.then
+  gen	a + b, a - b
+  kill	
+  In	a + b, a - b, x.0 * y.0
+  Out	a + b, x.0 * y.0
+---
+Basic Block if.else
+  gen	a * b
+  kill	
+  In	a + b, a * b, x.0 * y.0
+  Out	a + b, x.0 * y.0
+---
+Basic Block if.end
+  gen	a + b, x.0 * y.0
+  kill	
+  In	a + b, x.0 * y.0
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: bar
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: a - b
+  2: a * b
+  3: x.0 * y.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	a + b
+  In	a - b, a * b
+  Out	a - b, a * b
+---
+Basic Block if.then
+  gen	
+  kill	a + b, a - b
+  In	a * b
+  Out	a - b, a * b
+---
+Basic Block if.else
+  gen	
+  kill	a * b
+  In	a - b
+  Out	a - b, a * b
+---
+Basic Block if.end
+  gen	a - b, a * b
+  kill	a + b, x.0 * y.0
+  In	a - b, a * b
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Earliest Mode)...
+  Inserted:   %lcm.tmp = add i32 %a, %b into entry
+  Skipped Insertion (Dominance): x.0 * y.0 in entry
+  Inserted:   %lcm.tmp1 = sub i32 %a, %b into if.then
+  Skipped Insertion (Dominance): x.0 * y.0 in if.then
+  Inserted:   %lcm.tmp2 = mul i32 %a, %b into if.else
+  Skipped Insertion (Dominance): x.0 * y.0 in if.else
+  Inserted:   %lcm.tmp3 = mul i32 %x.0, %y.0 into if.end
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : a + b
+    ANTIC_IN : a + b, x.0 * y.0
+      Checking Expr 0 [a + b]: ANTIC=1, AVAIL=1
+      Checking Expr 1 [a - b]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [a * b]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [x.0 * y.0]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 3 [x.0 * y.0]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then
+            Pred P has multiple successors? No
+  Finished Checking Block: if.end
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %sub = sub nsw i32 %a, %b ->   %lcm.tmp1 = sub i32 %a, %b
+  Marking replacement:   %add2 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %add1 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %mul3 = mul nsw i32 %x.0, %y.0 ->   %lcm.tmp3 = mul i32 %x.0, %y.0
+  Marking replacement:   %add = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %mul = mul nsw i32 %a, %b ->   %lcm.tmp2 = mul i32 %a, %b
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %x.0 = phi i32 [ %sub, %if.then ], [ %add, %if.else ] (%sub -> %lcm.tmp1)
+  Replacing operand 1 of:   %x.0 = phi i32 [ %lcm.tmp1, %if.then ], [ %add, %if.else ] (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %y.0 = phi i32 [ %add1, %if.then ], [ %mul, %if.else ] (%add1 -> %lcm.tmp)
+  Replacing operand 1 of:   %y.0 = phi i32 [ %lcm.tmp, %if.then ], [ %mul, %if.else ] (%mul -> %lcm.tmp2)
+  Replacing operand 0 of:   ret i32 %mul3 (%mul3 -> %lcm.tmp3)
+  Deleting dead instructions...
+    Deleting:   %sub = sub nsw i32 %a, %b
+    Deleting:   %add2 = add nsw i32 %a, %b
+    Deleting:   %add1 = add nsw i32 %a, %b
+    Deleting:   %mul3 = mul nsw i32 %x.0, %y.0
+    Deleting:   %add = add nsw i32 %a, %b
+    Deleting:   %mul = mul nsw i32 %a, %b
+  Deleted 6 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ 
+
+=========================================
+Critical Edge Detection
+=========================================
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ clang-17 -fno-discard-value-names -Xclang -disable-O0-optnone -O0 -emit-llvm -c Tests/test_partial_redundancy.c -o Tests/test_partial_redundancy.O0.no-optnone.bc
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -passes=mem2reg Tests/test_partial_redundancy.O0.no-optnone.bc -o Tests/test_partial_redundancy.mem2reg.bc
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ llvm-dis-17 Tests/test_partial_redundancy.mem2reg.bc -o Tests/test_partial_redundancy.mem2reg.ll
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test_partial_redundancy.mem2reg.bc -o Tests/test_partial_redundancy.lcm-L.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: test_partial_redundancy
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: c * 10
+  1: a + b
+  2: y.0 + add1
+-------------------------------------------------
+
+Basic Block entry
+  gen	c * 10
+  kill	
+  In	
+  Out	c * 10
+---
+Basic Block if.then
+  gen	a + b
+  kill	
+  In	c * 10
+  Out	c * 10, a + b
+---
+Basic Block if.else
+  gen	
+  kill	
+  In	c * 10
+  Out	c * 10
+---
+Basic Block if.end
+  gen	a + b, y.0 + add1
+  kill	
+  In	c * 10
+  Out	c * 10, a + b, y.0 + add1
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: test_partial_redundancy
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: c * 10
+  1: a + b
+  2: y.0 + add1
+-------------------------------------------------
+
+Basic Block entry
+  gen	c * 10
+  kill	
+  In	c * 10, a + b
+  Out	a + b
+---
+Basic Block if.then
+  gen	a + b
+  kill	
+  In	a + b
+  Out	a + b
+---
+Basic Block if.else
+  gen	
+  kill	
+  In	a + b
+  Out	a + b
+---
+Basic Block if.end
+  gen	a + b
+  kill	y.0 + add1
+  In	a + b
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: test_partial_redundancy
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: c * 10
+  1: a + b
+  2: y.0 + add1
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	c * 10
+  In	
+  Out	
+---
+Basic Block if.then
+  gen	
+  kill	a + b
+  In	
+  Out	
+---
+Basic Block if.else
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.end
+  gen	
+  kill	a + b, y.0 + add1
+  In	
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Latest Mode)...
+  Inserted:   %lcm.tmp = mul i32 %c, 10 into entry
+  Inserted:   %lcm.tmp1 = add i32 %a, %b into entry
+  Inserted:   %lcm.tmp2 = add i32 %a, %b into if.then
+  Inserted:   %lcm.tmp3 = add i32 %a, %b into if.else
+  Inserted:   %lcm.tmp4 = add i32 %a, %b into if.end
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : c * 10
+    ANTIC_IN : a + b
+      Checking Expr 0 [c * 10]: ANTIC=0, AVAIL=1
+      Checking Expr 1 [a + b]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 1 [a + b]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then
+            Pred P has multiple successors? No
+      Checking Expr 2 [y.0 + add1]: ANTIC=0, AVAIL=0
+  Finished Checking Block: if.end
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %mul = mul nsw i32 %c, 10 ->   %lcm.tmp = mul i32 %c, 10
+  Marking replacement:   %add = add nsw i32 %a, %b ->   %lcm.tmp1 = add i32 %a, %b
+  Marking replacement:   %add1 = add nsw i32 %a, %b ->   %lcm.tmp1 = add i32 %a, %b
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %y.0 = phi i32 [ %add, %if.then ], [ %c, %if.else ] (%add -> %lcm.tmp1)
+  Replacing operand 1 of:   %add2 = add nsw i32 %y.0, %add1 (%add1 -> %lcm.tmp1)
+  Deleting dead instructions...
+    Deleting:   %mul = mul nsw i32 %c, 10
+    Deleting:   %add = add nsw i32 %a, %b
+    Deleting:   %add1 = add nsw i32 %a, %b
+  Deleted 3 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test_partial_redundancy.mem2reg.bc -o Tests/test_partial_redundancy.lcm-E.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: test_partial_redundancy
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: c * 10
+  1: a + b
+  2: y.0 + add1
+-------------------------------------------------
+
+Basic Block entry
+  gen	c * 10
+  kill	
+  In	
+  Out	c * 10
+---
+Basic Block if.then
+  gen	a + b
+  kill	
+  In	c * 10
+  Out	c * 10, a + b
+---
+Basic Block if.else
+  gen	
+  kill	
+  In	c * 10
+  Out	c * 10
+---
+Basic Block if.end
+  gen	a + b, y.0 + add1
+  kill	
+  In	c * 10
+  Out	c * 10, a + b, y.0 + add1
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: test_partial_redundancy
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: c * 10
+  1: a + b
+  2: y.0 + add1
+-------------------------------------------------
+
+Basic Block entry
+  gen	c * 10
+  kill	
+  In	c * 10, a + b
+  Out	a + b
+---
+Basic Block if.then
+  gen	a + b
+  kill	
+  In	a + b
+  Out	a + b
+---
+Basic Block if.else
+  gen	
+  kill	
+  In	a + b
+  Out	a + b
+---
+Basic Block if.end
+  gen	a + b
+  kill	y.0 + add1
+  In	a + b
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: test_partial_redundancy
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: c * 10
+  1: a + b
+  2: y.0 + add1
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	c * 10
+  In	
+  Out	
+---
+Basic Block if.then
+  gen	
+  kill	a + b
+  In	
+  Out	
+---
+Basic Block if.else
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.end
+  gen	
+  kill	a + b, y.0 + add1
+  In	
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Earliest Mode)...
+  Inserted:   %lcm.tmp = mul i32 %c, 10 into entry
+  Inserted:   %lcm.tmp1 = add i32 %a, %b into entry
+  Inserted:   %lcm.tmp2 = add i32 %a, %b into if.then
+  Inserted:   %lcm.tmp3 = add i32 %a, %b into if.else
+  Inserted:   %lcm.tmp4 = add i32 %a, %b into if.end
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : c * 10
+    ANTIC_IN : a + b
+      Checking Expr 0 [c * 10]: ANTIC=0, AVAIL=1
+      Checking Expr 1 [a + b]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 1 [a + b]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then
+            Pred P has multiple successors? No
+      Checking Expr 2 [y.0 + add1]: ANTIC=0, AVAIL=0
+  Finished Checking Block: if.end
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %mul = mul nsw i32 %c, 10 ->   %lcm.tmp = mul i32 %c, 10
+  Marking replacement:   %add = add nsw i32 %a, %b ->   %lcm.tmp1 = add i32 %a, %b
+  Marking replacement:   %add1 = add nsw i32 %a, %b ->   %lcm.tmp1 = add i32 %a, %b
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %y.0 = phi i32 [ %add, %if.then ], [ %c, %if.else ] (%add -> %lcm.tmp1)
+  Replacing operand 1 of:   %add2 = add nsw i32 %y.0, %add1 (%add1 -> %lcm.tmp1)
+  Deleting dead instructions...
+    Deleting:   %mul = mul nsw i32 %c, 10
+    Deleting:   %add = add nsw i32 %a, %b
+    Deleting:   %add1 = add nsw i32 %a, %b
+  Deleted 3 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ 
+
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ clang-17 -fno-discard-value-names -Xclang -disable-O0-optnone -O0 -emit-llvm -c Tests/test_complex_cfg.c -o Tests/test_complex_cfg.O0.no-optnone.bc
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -passes=mem2reg Tests/test_complex_cfg.O0.no-optnone.bc -o Tests/test_complex_cfg.mem2reg.bc
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ llvm-dis-17 Tests/test_complex_cfg.mem2reg.bc -o Tests/test_complex_cfg.mem2reg.ll
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test_complex_cfg.mem2reg.bc -o Tests/test_complex_cfg.lcm-L.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: test_complex_cfg
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: c + d
+  2: add * 2
+  3: add1 + add4
+  4: c - d
+  5: add1 - add6
+  6: a - b
+  7: add + 5
+  8: sub9 * add13
+  9: add16 * 3
+  10: sub9 / 2
+  11: x.2 + y.2
+  12: add21 + add20
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	add * 2, add + 5
+  In	
+  Out	a + b
+---
+Basic Block if.then
+  gen	c + d
+  kill	add1 + add4, add1 - add6
+  In	a + b
+  Out	a + b, c + d
+---
+Basic Block if.then3
+  gen	a + b, add * 2, add1 + add4
+  kill	
+  In	a + b, c + d
+  Out	a + b, c + d, add * 2, add1 + add4
+---
+Basic Block if.else
+  gen	a + b, c - d, add1 - add6
+  kill	
+  In	a + b, c + d
+  Out	a + b, c + d, c - d, add1 - add6
+---
+Basic Block if.end
+  gen	
+  kill	
+  In	a + b, c + d
+  Out	a + b, c + d
+---
+Basic Block if.else8
+  gen	a - b
+  kill	sub9 * add13, sub9 / 2
+  In	a + b
+  Out	a + b, a - b
+---
+Basic Block if.then11
+  gen	a + b, add + 5, sub9 * add13
+  kill	
+  In	a + b, a - b
+  Out	a + b, a - b, add + 5, sub9 * add13
+---
+Basic Block if.else15
+  gen	a + b, add16 * 3, sub9 / 2
+  kill	
+  In	a + b, a - b
+  Out	a + b, a - b, add16 * 3, sub9 / 2
+---
+Basic Block if.end18
+  gen	
+  kill	
+  In	a + b, a - b
+  Out	a + b, a - b
+---
+Basic Block if.end19
+  gen	a + b, x.2 + y.2, add21 + add20
+  kill	
+  In	a + b
+  Out	a + b, x.2 + y.2, add21 + add20
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: test_complex_cfg
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: c + d
+  2: add * 2
+  3: add1 + add4
+  4: c - d
+  5: add1 - add6
+  6: a - b
+  7: add + 5
+  8: sub9 * add13
+  9: add16 * 3
+  10: sub9 / 2
+  11: x.2 + y.2
+  12: add21 + add20
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	add * 2, add + 5
+  In	a + b, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.then
+  gen	c + d
+  kill	add1 + add4, add1 - add6
+  In	a + b, c + d, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.then3
+  gen	a + b, add * 2
+  kill	add1 + add4
+  In	a + b, add * 2, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.else
+  gen	a + b, c - d
+  kill	add1 - add6
+  In	a + b, c - d, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.end
+  gen	
+  kill	
+  In	a + b, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.else8
+  gen	a - b
+  kill	sub9 * add13, sub9 / 2
+  In	a + b, a - b, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.then11
+  gen	a + b, add + 5
+  kill	sub9 * add13
+  In	a + b, add + 5, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.else15
+  gen	a + b, sub9 / 2
+  kill	add16 * 3
+  In	a + b, sub9 / 2, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.end18
+  gen	
+  kill	
+  In	a + b, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.end19
+  gen	a + b, x.2 + y.2
+  kill	add21 + add20
+  In	a + b, x.2 + y.2
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: test_complex_cfg
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: c + d
+  2: add * 2
+  3: add1 + add4
+  4: c - d
+  5: add1 - add6
+  6: a - b
+  7: add + 5
+  8: sub9 * add13
+  9: add16 * 3
+  10: sub9 / 2
+  11: x.2 + y.2
+  12: add21 + add20
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	a + b
+  In	add * 2, add1 + add4, c - d, add1 - add6, add + 5, sub9 * add13, add16 * 3, sub9 / 2
+  Out	add * 2, add1 + add4, c - d, add1 - add6, add + 5, sub9 * add13, add16 * 3, sub9 / 2
+---
+Basic Block if.then
+  gen	
+  kill	c + d
+  In	add * 2, add1 + add4, c - d, add1 - add6
+  Out	c + d, add * 2, add1 + add4, c - d, add1 - add6
+---
+Basic Block if.then3
+  gen	c + d
+  kill	a + b, add * 2, add1 + add4
+  In	c + d, c - d, add1 - add6
+  Out	add * 2, add1 + add4, c - d, add1 - add6
+---
+Basic Block if.else
+  gen	c + d
+  kill	a + b, c - d, add1 - add6
+  In	c + d, add * 2, add1 + add4
+  Out	add * 2, add1 + add4, c - d, add1 - add6
+---
+Basic Block if.end
+  gen	add * 2, add1 + add4, c - d, add1 - add6
+  kill	
+  In	add * 2, add1 + add4, c - d, add1 - add6
+  Out	
+---
+Basic Block if.else8
+  gen	
+  kill	a - b
+  In	add + 5, sub9 * add13, add16 * 3, sub9 / 2
+  Out	a - b, add + 5, sub9 * add13, add16 * 3, sub9 / 2
+---
+Basic Block if.then11
+  gen	a - b
+  kill	a + b, add + 5, sub9 * add13
+  In	a - b, add16 * 3, sub9 / 2
+  Out	add + 5, sub9 * add13, add16 * 3, sub9 / 2
+---
+Basic Block if.else15
+  gen	a - b
+  kill	a + b, add16 * 3, sub9 / 2
+  In	a - b, add + 5, sub9 * add13
+  Out	add + 5, sub9 * add13, add16 * 3, sub9 / 2
+---
+Basic Block if.end18
+  gen	add + 5, sub9 * add13, add16 * 3, sub9 / 2
+  kill	
+  In	add + 5, sub9 * add13, add16 * 3, sub9 / 2
+  Out	
+---
+Basic Block if.end19
+  gen	
+  kill	a + b, x.2 + y.2, add21 + add20
+  In	
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Latest Mode)...
+  Inserted:   %lcm.tmp = add i32 %a, %b into entry
+  Skipped Insertion (Dominance): add * 2 in entry
+  Skipped Insertion (Dominance): add1 + add4 in entry
+  Inserted:   %lcm.tmp1 = sub i32 %c, %d into entry
+  Skipped Insertion (Dominance): add1 - add6 in entry
+  Skipped Insertion (Dominance): add + 5 in entry
+  Skipped Insertion (Dominance): sub9 * add13 in entry
+  Skipped Insertion (Dominance): add16 * 3 in entry
+  Skipped Insertion (Dominance): sub9 / 2 in entry
+  Skipped Insertion (Dominance): x.2 + y.2 in entry
+  Skipped Insertion (Dominance): x.2 + y.2 in if.then
+  Inserted:   %lcm.tmp2 = mul i32 %add, 2 into if.then3
+  Skipped Insertion (Dominance): x.2 + y.2 in if.then3
+  Inserted:   %lcm.tmp3 = sub i32 %c, %d into if.else
+  Skipped Insertion (Dominance): x.2 + y.2 in if.else
+  Skipped Insertion (Dominance): x.2 + y.2 in if.end
+  Skipped Insertion (Dominance): x.2 + y.2 in if.else8
+  Inserted:   %lcm.tmp4 = add i32 %add, 5 into if.then11
+  Skipped Insertion (Dominance): x.2 + y.2 in if.then11
+  Inserted:   %lcm.tmp5 = sdiv i32 %sub9, 2 into if.else15
+  Skipped Insertion (Dominance): x.2 + y.2 in if.else15
+  Skipped Insertion (Dominance): x.2 + y.2 in if.end18
+  Inserted:   %lcm.tmp6 = add i32 %x.2, %y.2 into if.end19
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.then3
+    Block if.then3 has multiple predecessors? No
+  Finished Checking Block: if.then3
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : a + b, c + d
+    ANTIC_IN : a + b, x.2 + y.2
+      Checking Expr 0 [a + b]: ANTIC=1, AVAIL=1
+      Checking Expr 1 [c + d]: ANTIC=0, AVAIL=1
+      Checking Expr 2 [add * 2]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [add1 + add4]: ANTIC=0, AVAIL=0
+      Checking Expr 4 [c - d]: ANTIC=0, AVAIL=0
+      Checking Expr 5 [add1 - add6]: ANTIC=0, AVAIL=0
+      Checking Expr 6 [a - b]: ANTIC=0, AVAIL=0
+      Checking Expr 7 [add + 5]: ANTIC=0, AVAIL=0
+      Checking Expr 8 [sub9 * add13]: ANTIC=0, AVAIL=0
+      Checking Expr 9 [add16 * 3]: ANTIC=0, AVAIL=0
+      Checking Expr 10 [sub9 / 2]: ANTIC=0, AVAIL=0
+      Checking Expr 11 [x.2 + y.2]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 11 [x.2 + y.2]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then3
+            Pred P has multiple successors? No
+      Checking Expr 12 [add21 + add20]: ANTIC=0, AVAIL=0
+  Finished Checking Block: if.end
+  Checking Block: if.else8
+    Block if.else8 has multiple predecessors? No
+  Finished Checking Block: if.else8
+  Checking Block: if.then11
+    Block if.then11 has multiple predecessors? No
+  Finished Checking Block: if.then11
+  Checking Block: if.else15
+    Block if.else15 has multiple predecessors? No
+  Finished Checking Block: if.else15
+  Checking Block: if.end18
+    Block if.end18 has multiple predecessors? Yes
+    AVAIL_IN : a + b, a - b
+    ANTIC_IN : a + b, x.2 + y.2
+      Checking Expr 0 [a + b]: ANTIC=1, AVAIL=1
+      Checking Expr 1 [c + d]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [add * 2]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [add1 + add4]: ANTIC=0, AVAIL=0
+      Checking Expr 4 [c - d]: ANTIC=0, AVAIL=0
+      Checking Expr 5 [add1 - add6]: ANTIC=0, AVAIL=0
+      Checking Expr 6 [a - b]: ANTIC=0, AVAIL=1
+      Checking Expr 7 [add + 5]: ANTIC=0, AVAIL=0
+      Checking Expr 8 [sub9 * add13]: ANTIC=0, AVAIL=0
+      Checking Expr 9 [add16 * 3]: ANTIC=0, AVAIL=0
+      Checking Expr 10 [sub9 / 2]: ANTIC=0, AVAIL=0
+      Checking Expr 11 [x.2 + y.2]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 11 [x.2 + y.2]
+        Checking Predecessors:
+          Pred P: if.else15
+            Pred P has multiple successors? No
+          Pred P: if.then11
+            Pred P has multiple successors? No
+      Checking Expr 12 [add21 + add20]: ANTIC=0, AVAIL=0
+  Finished Checking Block: if.end18
+  Checking Block: if.end19
+    Block if.end19 has multiple predecessors? Yes
+    AVAIL_IN : a + b
+    ANTIC_IN : a + b, x.2 + y.2
+      Checking Expr 0 [a + b]: ANTIC=1, AVAIL=1
+      Checking Expr 1 [c + d]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [add * 2]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [add1 + add4]: ANTIC=0, AVAIL=0
+      Checking Expr 4 [c - d]: ANTIC=0, AVAIL=0
+      Checking Expr 5 [add1 - add6]: ANTIC=0, AVAIL=0
+      Checking Expr 6 [a - b]: ANTIC=0, AVAIL=0
+      Checking Expr 7 [add + 5]: ANTIC=0, AVAIL=0
+      Checking Expr 8 [sub9 * add13]: ANTIC=0, AVAIL=0
+      Checking Expr 9 [add16 * 3]: ANTIC=0, AVAIL=0
+      Checking Expr 10 [sub9 / 2]: ANTIC=0, AVAIL=0
+      Checking Expr 11 [x.2 + y.2]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 11 [x.2 + y.2]
+        Checking Predecessors:
+          Pred P: if.end18
+            Pred P has multiple successors? No
+          Pred P: if.end
+            Pred P has multiple successors? No
+      Checking Expr 12 [add21 + add20]: ANTIC=0, AVAIL=0
+  Finished Checking Block: if.end19
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %add21 = add nsw i32 %x.2, %y.2 ->   %lcm.tmp6 = add i32 %x.2, %y.2
+  Marking replacement:   %add4 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %mul = mul nsw i32 %add, 2 ->   %lcm.tmp2 = mul i32 %add, 2
+  Marking replacement:   %add = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %add16 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %add6 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %sub = sub nsw i32 %c, %d ->   %lcm.tmp1 = sub i32 %c, %d
+  Marking replacement:   %add13 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %add12 = add nsw i32 %add, 5 ->   %lcm.tmp4 = add i32 %add, 5
+  Marking replacement:   %div = sdiv i32 %sub9, 2 ->   %lcm.tmp5 = sdiv i32 %sub9, 2
+  Marking replacement:   %add20 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %lcm.tmp2 = mul i32 %add, 2 (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %mul = mul nsw i32 %add, 2 (%add -> %lcm.tmp)
+  Replacing operand 1 of:   %add5 = add nsw i32 %add1, %add4 (%add4 -> %lcm.tmp)
+  Replacing operand 1 of:   %sub7 = sub nsw i32 %add1, %add6 (%add6 -> %lcm.tmp)
+  Replacing operand 0 of:   %x.0 = phi i32 [ %mul, %if.then3 ], [ %sub, %if.else ] (%mul -> %lcm.tmp2)
+  Replacing operand 1 of:   %x.0 = phi i32 [ %lcm.tmp2, %if.then3 ], [ %sub, %if.else ] (%sub -> %lcm.tmp1)
+  Replacing operand 0 of:   %lcm.tmp4 = add i32 %add, 5 (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %add12 = add nsw i32 %add, 5 (%add -> %lcm.tmp)
+  Replacing operand 1 of:   %mul14 = mul nsw i32 %sub9, %add13 (%add13 -> %lcm.tmp)
+  Replacing operand 0 of:   %mul17 = mul nsw i32 %add16, 3 (%add16 -> %lcm.tmp)
+  Replacing operand 0 of:   %x.1 = phi i32 [ %add12, %if.then11 ], [ %mul17, %if.else15 ] (%add12 -> %lcm.tmp4)
+  Replacing operand 1 of:   %y.1 = phi i32 [ %mul14, %if.then11 ], [ %div, %if.else15 ] (%div -> %lcm.tmp5)
+  Replacing operand 0 of:   %add22 = add nsw i32 %add21, %add20 (%add21 -> %lcm.tmp6)
+  Replacing operand 1 of:   %add22 = add nsw i32 %lcm.tmp6, %add20 (%add20 -> %lcm.tmp)
+  Deleting dead instructions...
+    Deleting:   %add21 = add nsw i32 %x.2, %y.2
+    Deleting:   %add4 = add nsw i32 %a, %b
+    Deleting:   %mul = mul nsw i32 %lcm.tmp, 2
+    Deleting:   %add = add nsw i32 %a, %b
+    Deleting:   %add16 = add nsw i32 %a, %b
+    Deleting:   %add6 = add nsw i32 %a, %b
+    Deleting:   %sub = sub nsw i32 %c, %d
+    Deleting:   %add13 = add nsw i32 %a, %b
+    Deleting:   %add12 = add nsw i32 %lcm.tmp, 5
+    Deleting:   %div = sdiv i32 %sub9, 2
+    Deleting:   %add20 = add nsw i32 %a, %b
+  Deleted 11 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test_complex_cfg.mem2reg.bc -o Tests/test_complex_cfg.lcm-E.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: test_complex_cfg
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: c + d
+  2: add * 2
+  3: add1 + add4
+  4: c - d
+  5: add1 - add6
+  6: a - b
+  7: add + 5
+  8: sub9 * add13
+  9: add16 * 3
+  10: sub9 / 2
+  11: x.2 + y.2
+  12: add21 + add20
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	add * 2, add + 5
+  In	
+  Out	a + b
+---
+Basic Block if.then
+  gen	c + d
+  kill	add1 + add4, add1 - add6
+  In	a + b
+  Out	a + b, c + d
+---
+Basic Block if.then3
+  gen	a + b, add * 2, add1 + add4
+  kill	
+  In	a + b, c + d
+  Out	a + b, c + d, add * 2, add1 + add4
+---
+Basic Block if.else
+  gen	a + b, c - d, add1 - add6
+  kill	
+  In	a + b, c + d
+  Out	a + b, c + d, c - d, add1 - add6
+---
+Basic Block if.end
+  gen	
+  kill	
+  In	a + b, c + d
+  Out	a + b, c + d
+---
+Basic Block if.else8
+  gen	a - b
+  kill	sub9 * add13, sub9 / 2
+  In	a + b
+  Out	a + b, a - b
+---
+Basic Block if.then11
+  gen	a + b, add + 5, sub9 * add13
+  kill	
+  In	a + b, a - b
+  Out	a + b, a - b, add + 5, sub9 * add13
+---
+Basic Block if.else15
+  gen	a + b, add16 * 3, sub9 / 2
+  kill	
+  In	a + b, a - b
+  Out	a + b, a - b, add16 * 3, sub9 / 2
+---
+Basic Block if.end18
+  gen	
+  kill	
+  In	a + b, a - b
+  Out	a + b, a - b
+---
+Basic Block if.end19
+  gen	a + b, x.2 + y.2, add21 + add20
+  kill	
+  In	a + b
+  Out	a + b, x.2 + y.2, add21 + add20
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: test_complex_cfg
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: c + d
+  2: add * 2
+  3: add1 + add4
+  4: c - d
+  5: add1 - add6
+  6: a - b
+  7: add + 5
+  8: sub9 * add13
+  9: add16 * 3
+  10: sub9 / 2
+  11: x.2 + y.2
+  12: add21 + add20
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	add * 2, add + 5
+  In	a + b, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.then
+  gen	c + d
+  kill	add1 + add4, add1 - add6
+  In	a + b, c + d, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.then3
+  gen	a + b, add * 2
+  kill	add1 + add4
+  In	a + b, add * 2, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.else
+  gen	a + b, c - d
+  kill	add1 - add6
+  In	a + b, c - d, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.end
+  gen	
+  kill	
+  In	a + b, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.else8
+  gen	a - b
+  kill	sub9 * add13, sub9 / 2
+  In	a + b, a - b, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.then11
+  gen	a + b, add + 5
+  kill	sub9 * add13
+  In	a + b, add + 5, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.else15
+  gen	a + b, sub9 / 2
+  kill	add16 * 3
+  In	a + b, sub9 / 2, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.end18
+  gen	
+  kill	
+  In	a + b, x.2 + y.2
+  Out	a + b, x.2 + y.2
+---
+Basic Block if.end19
+  gen	a + b, x.2 + y.2
+  kill	add21 + add20
+  In	a + b, x.2 + y.2
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: test_complex_cfg
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: c + d
+  2: add * 2
+  3: add1 + add4
+  4: c - d
+  5: add1 - add6
+  6: a - b
+  7: add + 5
+  8: sub9 * add13
+  9: add16 * 3
+  10: sub9 / 2
+  11: x.2 + y.2
+  12: add21 + add20
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	a + b
+  In	add * 2, add1 + add4, c - d, add1 - add6, add + 5, sub9 * add13, add16 * 3, sub9 / 2
+  Out	add * 2, add1 + add4, c - d, add1 - add6, add + 5, sub9 * add13, add16 * 3, sub9 / 2
+---
+Basic Block if.then
+  gen	
+  kill	c + d
+  In	add * 2, add1 + add4, c - d, add1 - add6
+  Out	c + d, add * 2, add1 + add4, c - d, add1 - add6
+---
+Basic Block if.then3
+  gen	c + d
+  kill	a + b, add * 2, add1 + add4
+  In	c + d, c - d, add1 - add6
+  Out	add * 2, add1 + add4, c - d, add1 - add6
+---
+Basic Block if.else
+  gen	c + d
+  kill	a + b, c - d, add1 - add6
+  In	c + d, add * 2, add1 + add4
+  Out	add * 2, add1 + add4, c - d, add1 - add6
+---
+Basic Block if.end
+  gen	add * 2, add1 + add4, c - d, add1 - add6
+  kill	
+  In	add * 2, add1 + add4, c - d, add1 - add6
+  Out	
+---
+Basic Block if.else8
+  gen	
+  kill	a - b
+  In	add + 5, sub9 * add13, add16 * 3, sub9 / 2
+  Out	a - b, add + 5, sub9 * add13, add16 * 3, sub9 / 2
+---
+Basic Block if.then11
+  gen	a - b
+  kill	a + b, add + 5, sub9 * add13
+  In	a - b, add16 * 3, sub9 / 2
+  Out	add + 5, sub9 * add13, add16 * 3, sub9 / 2
+---
+Basic Block if.else15
+  gen	a - b
+  kill	a + b, add16 * 3, sub9 / 2
+  In	a - b, add + 5, sub9 * add13
+  Out	add + 5, sub9 * add13, add16 * 3, sub9 / 2
+---
+Basic Block if.end18
+  gen	add + 5, sub9 * add13, add16 * 3, sub9 / 2
+  kill	
+  In	add + 5, sub9 * add13, add16 * 3, sub9 / 2
+  Out	
+---
+Basic Block if.end19
+  gen	
+  kill	a + b, x.2 + y.2, add21 + add20
+  In	
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Earliest Mode)...
+  Inserted:   %lcm.tmp = add i32 %a, %b into entry
+  Skipped Insertion (Dominance): x.2 + y.2 in entry
+  Inserted:   %lcm.tmp1 = add i32 %c, %d into if.then
+  Skipped Insertion (Dominance): x.2 + y.2 in if.then
+  Inserted:   %lcm.tmp2 = mul i32 %add, 2 into if.then3
+  Skipped Insertion (Dominance): x.2 + y.2 in if.then3
+  Inserted:   %lcm.tmp3 = sub i32 %c, %d into if.else
+  Skipped Insertion (Dominance): x.2 + y.2 in if.else
+  Skipped Insertion (Dominance): x.2 + y.2 in if.end
+  Inserted:   %lcm.tmp4 = sub i32 %a, %b into if.else8
+  Skipped Insertion (Dominance): x.2 + y.2 in if.else8
+  Inserted:   %lcm.tmp5 = add i32 %add, 5 into if.then11
+  Skipped Insertion (Dominance): x.2 + y.2 in if.then11
+  Inserted:   %lcm.tmp6 = sdiv i32 %sub9, 2 into if.else15
+  Skipped Insertion (Dominance): x.2 + y.2 in if.else15
+  Skipped Insertion (Dominance): x.2 + y.2 in if.end18
+  Inserted:   %lcm.tmp7 = add i32 %x.2, %y.2 into if.end19
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.then3
+    Block if.then3 has multiple predecessors? No
+  Finished Checking Block: if.then3
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : a + b, c + d
+    ANTIC_IN : a + b, x.2 + y.2
+      Checking Expr 0 [a + b]: ANTIC=1, AVAIL=1
+      Checking Expr 1 [c + d]: ANTIC=0, AVAIL=1
+      Checking Expr 2 [add * 2]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [add1 + add4]: ANTIC=0, AVAIL=0
+      Checking Expr 4 [c - d]: ANTIC=0, AVAIL=0
+      Checking Expr 5 [add1 - add6]: ANTIC=0, AVAIL=0
+      Checking Expr 6 [a - b]: ANTIC=0, AVAIL=0
+      Checking Expr 7 [add + 5]: ANTIC=0, AVAIL=0
+      Checking Expr 8 [sub9 * add13]: ANTIC=0, AVAIL=0
+      Checking Expr 9 [add16 * 3]: ANTIC=0, AVAIL=0
+      Checking Expr 10 [sub9 / 2]: ANTIC=0, AVAIL=0
+      Checking Expr 11 [x.2 + y.2]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 11 [x.2 + y.2]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then3
+            Pred P has multiple successors? No
+      Checking Expr 12 [add21 + add20]: ANTIC=0, AVAIL=0
+  Finished Checking Block: if.end
+  Checking Block: if.else8
+    Block if.else8 has multiple predecessors? No
+  Finished Checking Block: if.else8
+  Checking Block: if.then11
+    Block if.then11 has multiple predecessors? No
+  Finished Checking Block: if.then11
+  Checking Block: if.else15
+    Block if.else15 has multiple predecessors? No
+  Finished Checking Block: if.else15
+  Checking Block: if.end18
+    Block if.end18 has multiple predecessors? Yes
+    AVAIL_IN : a + b, a - b
+    ANTIC_IN : a + b, x.2 + y.2
+      Checking Expr 0 [a + b]: ANTIC=1, AVAIL=1
+      Checking Expr 1 [c + d]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [add * 2]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [add1 + add4]: ANTIC=0, AVAIL=0
+      Checking Expr 4 [c - d]: ANTIC=0, AVAIL=0
+      Checking Expr 5 [add1 - add6]: ANTIC=0, AVAIL=0
+      Checking Expr 6 [a - b]: ANTIC=0, AVAIL=1
+      Checking Expr 7 [add + 5]: ANTIC=0, AVAIL=0
+      Checking Expr 8 [sub9 * add13]: ANTIC=0, AVAIL=0
+      Checking Expr 9 [add16 * 3]: ANTIC=0, AVAIL=0
+      Checking Expr 10 [sub9 / 2]: ANTIC=0, AVAIL=0
+      Checking Expr 11 [x.2 + y.2]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 11 [x.2 + y.2]
+        Checking Predecessors:
+          Pred P: if.else15
+            Pred P has multiple successors? No
+          Pred P: if.then11
+            Pred P has multiple successors? No
+      Checking Expr 12 [add21 + add20]: ANTIC=0, AVAIL=0
+  Finished Checking Block: if.end18
+  Checking Block: if.end19
+    Block if.end19 has multiple predecessors? Yes
+    AVAIL_IN : a + b
+    ANTIC_IN : a + b, x.2 + y.2
+      Checking Expr 0 [a + b]: ANTIC=1, AVAIL=1
+      Checking Expr 1 [c + d]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [add * 2]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [add1 + add4]: ANTIC=0, AVAIL=0
+      Checking Expr 4 [c - d]: ANTIC=0, AVAIL=0
+      Checking Expr 5 [add1 - add6]: ANTIC=0, AVAIL=0
+      Checking Expr 6 [a - b]: ANTIC=0, AVAIL=0
+      Checking Expr 7 [add + 5]: ANTIC=0, AVAIL=0
+      Checking Expr 8 [sub9 * add13]: ANTIC=0, AVAIL=0
+      Checking Expr 9 [add16 * 3]: ANTIC=0, AVAIL=0
+      Checking Expr 10 [sub9 / 2]: ANTIC=0, AVAIL=0
+      Checking Expr 11 [x.2 + y.2]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 11 [x.2 + y.2]
+        Checking Predecessors:
+          Pred P: if.end18
+            Pred P has multiple successors? No
+          Pred P: if.end
+            Pred P has multiple successors? No
+      Checking Expr 12 [add21 + add20]: ANTIC=0, AVAIL=0
+  Finished Checking Block: if.end19
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %sub = sub nsw i32 %c, %d ->   %lcm.tmp3 = sub i32 %c, %d
+  Marking replacement:   %add1 = add nsw i32 %c, %d ->   %lcm.tmp1 = add i32 %c, %d
+  Marking replacement:   %add13 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %add12 = add nsw i32 %add, 5 ->   %lcm.tmp5 = add i32 %add, 5
+  Marking replacement:   %div = sdiv i32 %sub9, 2 ->   %lcm.tmp6 = sdiv i32 %sub9, 2
+  Marking replacement:   %add20 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %add21 = add nsw i32 %x.2, %y.2 ->   %lcm.tmp7 = add i32 %x.2, %y.2
+  Marking replacement:   %add4 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %mul = mul nsw i32 %add, 2 ->   %lcm.tmp2 = mul i32 %add, 2
+  Marking replacement:   %sub9 = sub nsw i32 %a, %b ->   %lcm.tmp4 = sub i32 %a, %b
+  Marking replacement:   %add = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %add16 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %add6 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %lcm.tmp2 = mul i32 %add, 2 (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %mul = mul nsw i32 %add, 2 (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %add5 = add nsw i32 %add1, %add4 (%add1 -> %lcm.tmp1)
+  Replacing operand 1 of:   %add5 = add nsw i32 %lcm.tmp1, %add4 (%add4 -> %lcm.tmp)
+  Replacing operand 0 of:   %sub7 = sub nsw i32 %add1, %add6 (%add1 -> %lcm.tmp1)
+  Replacing operand 1 of:   %sub7 = sub nsw i32 %lcm.tmp1, %add6 (%add6 -> %lcm.tmp)
+  Replacing operand 0 of:   %x.0 = phi i32 [ %mul, %if.then3 ], [ %sub, %if.else ] (%mul -> %lcm.tmp2)
+  Replacing operand 1 of:   %x.0 = phi i32 [ %lcm.tmp2, %if.then3 ], [ %sub, %if.else ] (%sub -> %lcm.tmp3)
+  Replacing operand 0 of:   %lcm.tmp5 = add i32 %add, 5 (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %add12 = add nsw i32 %add, 5 (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %mul14 = mul nsw i32 %sub9, %add13 (%sub9 -> %lcm.tmp4)
+  Replacing operand 1 of:   %mul14 = mul nsw i32 %lcm.tmp4, %add13 (%add13 -> %lcm.tmp)
+  Replacing operand 0 of:   %lcm.tmp6 = sdiv i32 %sub9, 2 (%sub9 -> %lcm.tmp4)
+  Replacing operand 0 of:   %mul17 = mul nsw i32 %add16, 3 (%add16 -> %lcm.tmp)
+  Replacing operand 0 of:   %div = sdiv i32 %sub9, 2 (%sub9 -> %lcm.tmp4)
+  Replacing operand 0 of:   %x.1 = phi i32 [ %add12, %if.then11 ], [ %mul17, %if.else15 ] (%add12 -> %lcm.tmp5)
+  Replacing operand 1 of:   %y.1 = phi i32 [ %mul14, %if.then11 ], [ %div, %if.else15 ] (%div -> %lcm.tmp6)
+  Replacing operand 0 of:   %add22 = add nsw i32 %add21, %add20 (%add21 -> %lcm.tmp7)
+  Replacing operand 1 of:   %add22 = add nsw i32 %lcm.tmp7, %add20 (%add20 -> %lcm.tmp)
+  Deleting dead instructions...
+    Deleting:   %sub = sub nsw i32 %c, %d
+    Deleting:   %add1 = add nsw i32 %c, %d
+    Deleting:   %add13 = add nsw i32 %a, %b
+    Deleting:   %add12 = add nsw i32 %lcm.tmp, 5
+    Deleting:   %div = sdiv i32 %lcm.tmp4, 2
+    Deleting:   %add20 = add nsw i32 %a, %b
+    Deleting:   %add21 = add nsw i32 %x.2, %y.2
+    Deleting:   %add4 = add nsw i32 %a, %b
+    Deleting:   %mul = mul nsw i32 %lcm.tmp, 2
+    Deleting:   %sub9 = sub nsw i32 %a, %b
+    Deleting:   %add = add nsw i32 %a, %b
+    Deleting:   %add16 = add nsw i32 %a, %b
+    Deleting:   %add6 = add nsw i32 %a, %b
+  Deleted 13 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ 
+
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ clang-17 -fno-discard-value-names -Xclang -disable-O0-optnone -O0 -emit-llvm -c Tests/test_loop_invariant.c -o Tests/test_loop_invariant.O0.no-optnone.bc
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -passes=mem2reg Tests/test_loop_invariant.O0.no-optnone.bc -o Tests/test_loop_invariant.mem2reg.bc
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ llvm-dis-17 Tests/test_loop_invariant.mem2reg.bc -o Tests/test_loop_invariant.mem2reg.ll
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test_loop_invariant.mem2reg.bc -o Tests/test_loop_invariant.lcm-L.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: test_loop_invariant
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: add * i.0
+  2: sum.0 + mul
+  3: i.0 + 1
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block for.cond
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block for.body
+  gen	a + b, add * i.0, sum.0 + mul
+  kill	
+  In	
+  Out	a + b, add * i.0, sum.0 + mul
+---
+Basic Block for.inc
+  gen	i.0 + 1
+  kill	
+  In	a + b, add * i.0, sum.0 + mul
+  Out	a + b, add * i.0, sum.0 + mul, i.0 + 1
+---
+Basic Block for.end
+  gen	
+  kill	
+  In	
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: test_loop_invariant
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: add * i.0
+  2: sum.0 + mul
+  3: i.0 + 1
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block for.cond
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block for.body
+  gen	a + b
+  kill	add * i.0, sum.0 + mul
+  In	a + b, i.0 + 1
+  Out	i.0 + 1
+---
+Basic Block for.inc
+  gen	i.0 + 1
+  kill	
+  In	i.0 + 1
+  Out	
+---
+Basic Block for.end
+  gen	
+  kill	
+  In	
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: test_loop_invariant
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: add * i.0
+  2: sum.0 + mul
+  3: i.0 + 1
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	sum.0 + mul, i.0 + 1
+  Out	sum.0 + mul, i.0 + 1
+---
+Basic Block for.cond
+  gen	sum.0 + mul, i.0 + 1
+  kill	
+  In	sum.0 + mul, i.0 + 1
+  Out	
+---
+Basic Block for.body
+  gen	
+  kill	a + b, add * i.0, sum.0 + mul
+  In	
+  Out	sum.0 + mul
+---
+Basic Block for.inc
+  gen	
+  kill	i.0 + 1
+  In	sum.0 + mul
+  Out	sum.0 + mul, i.0 + 1
+---
+Basic Block for.end
+  gen	
+  kill	
+  In	
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Latest Mode)...
+  Skipped Insertion (Dominance): sum.0 + mul in entry
+  Skipped Insertion (Dominance): i.0 + 1 in entry
+  Inserted:   %lcm.tmp = add i32 %i.0, 1 into for.body
+  Inserted:   %lcm.tmp1 = add i32 %i.0, 1 into for.inc
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: for.cond
+    Block for.cond has multiple predecessors? Yes
+    AVAIL_IN : 
+    ANTIC_IN : 
+      Checking Expr 0 [a + b]: ANTIC=0, AVAIL=0
+      Checking Expr 1 [add * i.0]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [sum.0 + mul]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [i.0 + 1]: ANTIC=0, AVAIL=0
+  Finished Checking Block: for.cond
+  Checking Block: for.body
+    Block for.body has multiple predecessors? No
+  Finished Checking Block: for.body
+  Checking Block: for.inc
+    Block for.inc has multiple predecessors? No
+  Finished Checking Block: for.inc
+  Checking Block: for.end
+    Block for.end has multiple predecessors? No
+  Finished Checking Block: for.end
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %inc = add nsw i32 %i.0, 1 ->   %lcm.tmp = add i32 %i.0, 1
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 1 of:   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ] (%inc -> %lcm.tmp)
+  Deleting dead instructions...
+    Deleting:   %inc = add nsw i32 %i.0, 1
+  Deleted 1 original instructions.
+opt-17: /usr/lib/llvm-17/include/llvm/ADT/SmallVector.h:312: T& llvm::SmallVectorTemplateCommon<T, <template-parameter-1-2> >::back() [with T = long unsigned int; <template-parameter-1-2> = void; llvm::SmallVectorTemplateCommon<T, <template-parameter-1-2> >::reference = long unsigned int&]: Assertion `!empty()' failed.
+PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/ and include the crash backtrace.
+Stack dump:
+0.	Program arguments: opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test_loop_invariant.mem2reg.bc -o Tests/test_loop_invariant.lcm-L.ll
+Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):
+0  libLLVM-17.so.1 0x000073aecd2cc406 llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 54
+1  libLLVM-17.so.1 0x000073aecd2ca5b0 llvm::sys::RunSignalHandlers() + 80
+2  libLLVM-17.so.1 0x000073aecd2cca9b
+3  libc.so.6       0x000073aecbe42520
+4  libc.so.6       0x000073aecbe969fc pthread_kill + 300
+5  libc.so.6       0x000073aecbe42476 raise + 22
+6  libc.so.6       0x000073aecbe287f3 abort + 211
+7  libc.so.6       0x000073aecbe2871b
+8  libc.so.6       0x000073aecbe39e96
+9  UnifiedPass.so  0x000073aecc1405d3 llvm::SmallVectorTemplateCommon<unsigned long, void>::back() + 75
+10 UnifiedPass.so  0x000073aecc135e10 llvm::BitVector::set_unused_bits(bool) + 104
+11 UnifiedPass.so  0x000073aecc13579d llvm::BitVector::resize(unsigned int, bool) + 45
+12 UnifiedPass.so  0x000073aecc13a8fd Dataflow::initializeDomain(unsigned int) + 227
+13 UnifiedPass.so  0x000073aecc13cc39 UnifiedPass::AvailableExpressions::run(llvm::Function&, llvm::AnalysisManager<llvm::Function>&) + 171
+14 UnifiedPass.so  0x000073aecc165259 llvm::detail::AnalysisPassModel<llvm::Function, UnifiedPass::AvailableExpressions, llvm::PreservedAnalyses, llvm::AnalysisManager<llvm::Function>::Invalidator>::run(llvm::Function&, llvm::AnalysisManager<llvm::Function>&) + 99
+15 libLLVM-17.so.1 0x000073aecd442a91 llvm::AnalysisManager<llvm::Function>::getResultImpl(llvm::AnalysisKey*, llvm::Function&) + 673
+16 UnifiedPass.so  0x000073aecc1454de UnifiedPass::AvailableExpressions::Result& llvm::AnalysisManager<llvm::Function>::getResult<UnifiedPass::AvailableExpressions>(llvm::Function&) + 112
+17 UnifiedPass.so  0x000073aecc165f44 llvm::RequireAnalysisPass<UnifiedPass::AvailableExpressions, llvm::Function, llvm::AnalysisManager<llvm::Function>>::run(llvm::Function&, llvm::AnalysisManager<llvm::Function>&) + 62
+18 UnifiedPass.so  0x000073aecc164d31 llvm::detail::PassModel<llvm::Function, llvm::RequireAnalysisPass<UnifiedPass::AvailableExpressions, llvm::Function, llvm::AnalysisManager<llvm::Function>>, llvm::PreservedAnalyses, llvm::AnalysisManager<llvm::Function>>::run(llvm::Function&, llvm::AnalysisManager<llvm::Function>&) + 71
+19 libLLVM-17.so.1 0x000073aecd440484 llvm::PassManager<llvm::Function, llvm::AnalysisManager<llvm::Function>>::run(llvm::Function&, llvm::AnalysisManager<llvm::Function>&) + 276
+20 libLLVM-17.so.1 0x000073aecf21096d
+21 libLLVM-17.so.1 0x000073aecd443c81 llvm::ModuleToFunctionPassAdaptor::run(llvm::Module&, llvm::AnalysisManager<llvm::Module>&) + 305
+22 libLLVM-17.so.1 0x000073aecf21078d
+23 libLLVM-17.so.1 0x000073aecd43f224 llvm::PassManager<llvm::Module, llvm::AnalysisManager<llvm::Module>>::run(llvm::Module&, llvm::AnalysisManager<llvm::Module>&) + 276
+24 opt-17          0x000061a4b47da4c9 llvm::runPassPipeline(llvm::StringRef, llvm::Module&, llvm::TargetMachine*, llvm::TargetLibraryInfoImpl*, llvm::ToolOutputFile*, llvm::ToolOutputFile*, llvm::ToolOutputFile*, llvm::StringRef, llvm::ArrayRef<llvm::PassPlugin>, llvm::opt_tool::OutputKind, llvm::opt_tool::VerifierKind, bool, bool, bool, bool, bool, bool, bool) + 13753
+25 opt-17          0x000061a4b47e735d main + 7949
+26 libc.so.6       0x000073aecbe29d90
+27 libc.so.6       0x000073aecbe29e40 __libc_start_main + 128
+28 opt-17          0x000061a4b47d4175 _start + 37
+Aborted (core dumped)
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test_loop_invariant.mem2reg.bc -o Tests/test_loop_invariant.lcm-E.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: test_loop_invariant
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: add * i.0
+  2: sum.0 + mul
+  3: i.0 + 1
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block for.cond
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block for.body
+  gen	a + b, add * i.0, sum.0 + mul
+  kill	
+  In	
+  Out	a + b, add * i.0, sum.0 + mul
+---
+Basic Block for.inc
+  gen	i.0 + 1
+  kill	
+  In	a + b, add * i.0, sum.0 + mul
+  Out	a + b, add * i.0, sum.0 + mul, i.0 + 1
+---
+Basic Block for.end
+  gen	
+  kill	
+  In	
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: test_loop_invariant
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: add * i.0
+  2: sum.0 + mul
+  3: i.0 + 1
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block for.cond
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block for.body
+  gen	a + b
+  kill	add * i.0, sum.0 + mul
+  In	a + b, i.0 + 1
+  Out	i.0 + 1
+---
+Basic Block for.inc
+  gen	i.0 + 1
+  kill	
+  In	i.0 + 1
+  Out	
+---
+Basic Block for.end
+  gen	
+  kill	
+  In	
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: test_loop_invariant
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: add * i.0
+  2: sum.0 + mul
+  3: i.0 + 1
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	sum.0 + mul, i.0 + 1
+  Out	sum.0 + mul, i.0 + 1
+---
+Basic Block for.cond
+  gen	sum.0 + mul, i.0 + 1
+  kill	
+  In	sum.0 + mul, i.0 + 1
+  Out	
+---
+Basic Block for.body
+  gen	
+  kill	a + b, add * i.0, sum.0 + mul
+  In	
+  Out	sum.0 + mul
+---
+Basic Block for.inc
+  gen	
+  kill	i.0 + 1
+  In	sum.0 + mul
+  Out	sum.0 + mul, i.0 + 1
+---
+Basic Block for.end
+  gen	
+  kill	
+  In	
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Earliest Mode)...
+  Inserted:   %lcm.tmp = add i32 %a, %b into for.body
+  Inserted:   %lcm.tmp1 = add i32 %i.0, 1 into for.body
+  Inserted:   %lcm.tmp2 = add i32 %i.0, 1 into for.inc
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: for.cond
+    Block for.cond has multiple predecessors? Yes
+    AVAIL_IN : 
+    ANTIC_IN : 
+      Checking Expr 0 [a + b]: ANTIC=0, AVAIL=0
+      Checking Expr 1 [add * i.0]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [sum.0 + mul]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [i.0 + 1]: ANTIC=0, AVAIL=0
+  Finished Checking Block: for.cond
+  Checking Block: for.body
+    Block for.body has multiple predecessors? No
+  Finished Checking Block: for.body
+  Checking Block: for.inc
+    Block for.inc has multiple predecessors? No
+  Finished Checking Block: for.inc
+  Checking Block: for.end
+    Block for.end has multiple predecessors? No
+  Finished Checking Block: for.end
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %inc = add nsw i32 %i.0, 1 ->   %lcm.tmp1 = add i32 %i.0, 1
+  Marking replacement:   %add = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 1 of:   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ] (%inc -> %lcm.tmp1)
+  Replacing operand 0 of:   %mul = mul nsw i32 %add, %i.0 (%add -> %lcm.tmp)
+  Deleting dead instructions...
+    Deleting:   %inc = add nsw i32 %i.0, 1
+    Deleting:   %add = add nsw i32 %a, %b
+  Deleted 2 original instructions.
+opt-17: /usr/lib/llvm-17/include/llvm/ADT/SmallVector.h:312: T& llvm::SmallVectorTemplateCommon<T, <template-parameter-1-2> >::back() [with T = long unsigned int; <template-parameter-1-2> = void; llvm::SmallVectorTemplateCommon<T, <template-parameter-1-2> >::reference = long unsigned int&]: Assertion `!empty()' failed.
+PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/ and include the crash backtrace.
+Stack dump:
+0.	Program arguments: opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test_loop_invariant.mem2reg.bc -o Tests/test_loop_invariant.lcm-E.ll
+Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):
+0  libLLVM-17.so.1 0x000074f055ccc406 llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 54
+1  libLLVM-17.so.1 0x000074f055cca5b0 llvm::sys::RunSignalHandlers() + 80
+2  libLLVM-17.so.1 0x000074f055ccca9b
+3  libc.so.6       0x000074f054842520
+4  libc.so.6       0x000074f0548969fc pthread_kill + 300
+5  libc.so.6       0x000074f054842476 raise + 22
+6  libc.so.6       0x000074f0548287f3 abort + 211
+7  libc.so.6       0x000074f05482871b
+8  libc.so.6       0x000074f054839e96
+9  UnifiedPass.so  0x000074f054b9d5d3 llvm::SmallVectorTemplateCommon<unsigned long, void>::back() + 75
+10 UnifiedPass.so  0x000074f054b92e10 llvm::BitVector::set_unused_bits(bool) + 104
+11 UnifiedPass.so  0x000074f054b9279d llvm::BitVector::resize(unsigned int, bool) + 45
+12 UnifiedPass.so  0x000074f054b978fd Dataflow::initializeDomain(unsigned int) + 227
+13 UnifiedPass.so  0x000074f054b99c39 UnifiedPass::AvailableExpressions::run(llvm::Function&, llvm::AnalysisManager<llvm::Function>&) + 171
+14 UnifiedPass.so  0x000074f054bc2259 llvm::detail::AnalysisPassModel<llvm::Function, UnifiedPass::AvailableExpressions, llvm::PreservedAnalyses, llvm::AnalysisManager<llvm::Function>::Invalidator>::run(llvm::Function&, llvm::AnalysisManager<llvm::Function>&) + 99
+15 libLLVM-17.so.1 0x000074f055e42a91 llvm::AnalysisManager<llvm::Function>::getResultImpl(llvm::AnalysisKey*, llvm::Function&) + 673
+16 UnifiedPass.so  0x000074f054ba24de UnifiedPass::AvailableExpressions::Result& llvm::AnalysisManager<llvm::Function>::getResult<UnifiedPass::AvailableExpressions>(llvm::Function&) + 112
+17 UnifiedPass.so  0x000074f054bc2f44 llvm::RequireAnalysisPass<UnifiedPass::AvailableExpressions, llvm::Function, llvm::AnalysisManager<llvm::Function>>::run(llvm::Function&, llvm::AnalysisManager<llvm::Function>&) + 62
+18 UnifiedPass.so  0x000074f054bc1d31 llvm::detail::PassModel<llvm::Function, llvm::RequireAnalysisPass<UnifiedPass::AvailableExpressions, llvm::Function, llvm::AnalysisManager<llvm::Function>>, llvm::PreservedAnalyses, llvm::AnalysisManager<llvm::Function>>::run(llvm::Function&, llvm::AnalysisManager<llvm::Function>&) + 71
+19 libLLVM-17.so.1 0x000074f055e40484 llvm::PassManager<llvm::Function, llvm::AnalysisManager<llvm::Function>>::run(llvm::Function&, llvm::AnalysisManager<llvm::Function>&) + 276
+20 libLLVM-17.so.1 0x000074f057c1096d
+21 libLLVM-17.so.1 0x000074f055e43c81 llvm::ModuleToFunctionPassAdaptor::run(llvm::Module&, llvm::AnalysisManager<llvm::Module>&) + 305
+22 libLLVM-17.so.1 0x000074f057c1078d
+23 libLLVM-17.so.1 0x000074f055e3f224 llvm::PassManager<llvm::Module, llvm::AnalysisManager<llvm::Module>>::run(llvm::Module&, llvm::AnalysisManager<llvm::Module>&) + 276
+24 opt-17          0x00005b264c3824c9 llvm::runPassPipeline(llvm::StringRef, llvm::Module&, llvm::TargetMachine*, llvm::TargetLibraryInfoImpl*, llvm::ToolOutputFile*, llvm::ToolOutputFile*, llvm::ToolOutputFile*, llvm::StringRef, llvm::ArrayRef<llvm::PassPlugin>, llvm::opt_tool::OutputKind, llvm::opt_tool::VerifierKind, bool, bool, bool, bool, bool, bool, bool) + 13753
+25 opt-17          0x00005b264c38f35d main + 7949
+26 libc.so.6       0x000074f054829d90
+27 libc.so.6       0x000074f054829e40 __libc_start_main + 128
+28 opt-17          0x00005b264c37c175 _start + 37
+Aborted (core dumped)
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ 
+
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ clang-17 -fno-discard-value-names -Xclang -disable-O0-optnone -O0 -emit-llvm -c Tests/test2.c -o Tests/test2.O0.no-optnone.bc
+opt-17 -passes=mem2reg Tests/test2.O0.no-optnone.bc -o Tests/test2.mem2reg.bc
+llvm-dis-17 Tests/test2.mem2reg.bc -o Tests/test2.mem2reg.ll
+opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test2.mem2reg.bc -o Tests/test2.lcm-L.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: foo
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: a * b
+  2: add + 1
+  3: add - 1
+  4: y.0 + z.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	add + 1, add - 1
+  In	
+  Out	a + b
+---
+Basic Block if.then
+  gen	a * b, add + 1
+  kill	
+  In	a + b
+  Out	a + b, a * b, add + 1
+---
+Basic Block if.else
+  gen	a * b, add - 1
+  kill	
+  In	a + b
+  Out	a + b, a * b, add - 1
+---
+Basic Block if.end
+  gen	y.0 + z.0
+  kill	
+  In	a + b, a * b
+  Out	a + b, a * b, y.0 + z.0
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: foo
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: a * b
+  2: add + 1
+  3: add - 1
+  4: y.0 + z.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	add + 1, add - 1
+  In	a + b, a * b, y.0 + z.0
+  Out	a * b, y.0 + z.0
+---
+Basic Block if.then
+  gen	a * b, add + 1
+  kill	
+  In	a * b, add + 1, y.0 + z.0
+  Out	y.0 + z.0
+---
+Basic Block if.else
+  gen	a * b, add - 1
+  kill	
+  In	a * b, add - 1, y.0 + z.0
+  Out	y.0 + z.0
+---
+Basic Block if.end
+  gen	y.0 + z.0
+  kill	
+  In	y.0 + z.0
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: foo
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: a * b
+  2: add + 1
+  3: add - 1
+  4: y.0 + z.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	a + b
+  In	add + 1, add - 1
+  Out	a + b, add + 1, add - 1
+---
+Basic Block if.then
+  gen	a + b
+  kill	a * b, add + 1
+  In	a + b, add - 1
+  Out	a * b, add + 1, add - 1
+---
+Basic Block if.else
+  gen	a + b
+  kill	a * b, add - 1
+  In	a + b, add + 1
+  Out	a * b, add + 1, add - 1
+---
+Basic Block if.end
+  gen	a * b, add + 1, add - 1
+  kill	y.0 + z.0
+  In	a * b, add + 1, add - 1
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Latest Mode)...
+  Inserted:   %lcm.tmp = add i32 %a, %b into entry
+  Inserted:   %lcm.tmp1 = mul i32 %a, %b into entry
+  Skipped Insertion (Dominance): add + 1 in entry
+  Skipped Insertion (Dominance): add - 1 in entry
+  Skipped Insertion (Dominance): y.0 + z.0 in entry
+  Inserted:   %lcm.tmp2 = mul i32 %a, %b into if.then
+  Inserted:   %lcm.tmp3 = add i32 %add, 1 into if.then
+  Skipped Insertion (Dominance): y.0 + z.0 in if.then
+  Inserted:   %lcm.tmp4 = mul i32 %a, %b into if.else
+  Inserted:   %lcm.tmp5 = sub i32 %add, 1 into if.else
+  Skipped Insertion (Dominance): y.0 + z.0 in if.else
+  Inserted:   %lcm.tmp6 = add i32 %y.0, %z.0 into if.end
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : a + b, a * b
+    ANTIC_IN : y.0 + z.0
+      Checking Expr 0 [a + b]: ANTIC=0, AVAIL=1
+      Checking Expr 1 [a * b]: ANTIC=0, AVAIL=1
+      Checking Expr 2 [add + 1]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [add - 1]: ANTIC=0, AVAIL=0
+      Checking Expr 4 [y.0 + z.0]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 4 [y.0 + z.0]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then
+            Pred P has multiple successors? No
+  Finished Checking Block: if.end
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %add3 = add nsw i32 %y.0, %z.0 ->   %lcm.tmp6 = add i32 %y.0, %z.0
+  Marking replacement:   %add1 = add nsw i32 %add, 1 ->   %lcm.tmp3 = add i32 %add, 1
+  Marking replacement:   %mul = mul nsw i32 %a, %b ->   %lcm.tmp1 = mul i32 %a, %b
+  Marking replacement:   %sub = sub nsw i32 %add, 1 ->   %lcm.tmp5 = sub i32 %add, 1
+  Marking replacement:   %mul2 = mul nsw i32 %a, %b ->   %lcm.tmp1 = mul i32 %a, %b
+  Marking replacement:   %add = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %lcm.tmp3 = add i32 %add, 1 (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %add1 = add nsw i32 %add, 1 (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %lcm.tmp5 = sub i32 %add, 1 (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %sub = sub nsw i32 %add, 1 (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %y.0 = phi i32 [ %mul, %if.then ], [ %mul2, %if.else ] (%mul -> %lcm.tmp1)
+  Replacing operand 1 of:   %y.0 = phi i32 [ %lcm.tmp1, %if.then ], [ %mul2, %if.else ] (%mul2 -> %lcm.tmp1)
+  Replacing operand 0 of:   %z.0 = phi i32 [ %add1, %if.then ], [ %sub, %if.else ] (%add1 -> %lcm.tmp3)
+  Replacing operand 1 of:   %z.0 = phi i32 [ %lcm.tmp3, %if.then ], [ %sub, %if.else ] (%sub -> %lcm.tmp5)
+  Replacing operand 0 of:   ret i32 %add3 (%add3 -> %lcm.tmp6)
+  Deleting dead instructions...
+    Deleting:   %add3 = add nsw i32 %y.0, %z.0
+    Deleting:   %add1 = add nsw i32 %lcm.tmp, 1
+    Deleting:   %mul = mul nsw i32 %a, %b
+    Deleting:   %sub = sub nsw i32 %lcm.tmp, 1
+    Deleting:   %mul2 = mul nsw i32 %a, %b
+    Deleting:   %add = add nsw i32 %a, %b
+  Deleted 6 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test2.mem2reg.bc -o Tests/test2.lcm-E.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: foo
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: a * b
+  2: add + 1
+  3: add - 1
+  4: y.0 + z.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	add + 1, add - 1
+  In	
+  Out	a + b
+---
+Basic Block if.then
+  gen	a * b, add + 1
+  kill	
+  In	a + b
+  Out	a + b, a * b, add + 1
+---
+Basic Block if.else
+  gen	a * b, add - 1
+  kill	
+  In	a + b
+  Out	a + b, a * b, add - 1
+---
+Basic Block if.end
+  gen	y.0 + z.0
+  kill	
+  In	a + b, a * b
+  Out	a + b, a * b, y.0 + z.0
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: foo
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: a * b
+  2: add + 1
+  3: add - 1
+  4: y.0 + z.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	add + 1, add - 1
+  In	a + b, a * b, y.0 + z.0
+  Out	a * b, y.0 + z.0
+---
+Basic Block if.then
+  gen	a * b, add + 1
+  kill	
+  In	a * b, add + 1, y.0 + z.0
+  Out	y.0 + z.0
+---
+Basic Block if.else
+  gen	a * b, add - 1
+  kill	
+  In	a * b, add - 1, y.0 + z.0
+  Out	y.0 + z.0
+---
+Basic Block if.end
+  gen	y.0 + z.0
+  kill	
+  In	y.0 + z.0
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: foo
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: a * b
+  2: add + 1
+  3: add - 1
+  4: y.0 + z.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	a + b
+  In	add + 1, add - 1
+  Out	a + b, add + 1, add - 1
+---
+Basic Block if.then
+  gen	a + b
+  kill	a * b, add + 1
+  In	a + b, add - 1
+  Out	a * b, add + 1, add - 1
+---
+Basic Block if.else
+  gen	a + b
+  kill	a * b, add - 1
+  In	a + b, add + 1
+  Out	a * b, add + 1, add - 1
+---
+Basic Block if.end
+  gen	a * b, add + 1, add - 1
+  kill	y.0 + z.0
+  In	a * b, add + 1, add - 1
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Earliest Mode)...
+  Inserted:   %lcm.tmp = add i32 %a, %b into entry
+  Inserted:   %lcm.tmp1 = mul i32 %a, %b into entry
+  Skipped Insertion (Dominance): y.0 + z.0 in entry
+  Inserted:   %lcm.tmp2 = mul i32 %a, %b into if.then
+  Inserted:   %lcm.tmp3 = add i32 %add, 1 into if.then
+  Skipped Insertion (Dominance): y.0 + z.0 in if.then
+  Inserted:   %lcm.tmp4 = mul i32 %a, %b into if.else
+  Inserted:   %lcm.tmp5 = sub i32 %add, 1 into if.else
+  Skipped Insertion (Dominance): y.0 + z.0 in if.else
+  Inserted:   %lcm.tmp6 = add i32 %y.0, %z.0 into if.end
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : a + b, a * b
+    ANTIC_IN : y.0 + z.0
+      Checking Expr 0 [a + b]: ANTIC=0, AVAIL=1
+      Checking Expr 1 [a * b]: ANTIC=0, AVAIL=1
+      Checking Expr 2 [add + 1]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [add - 1]: ANTIC=0, AVAIL=0
+      Checking Expr 4 [y.0 + z.0]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 4 [y.0 + z.0]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then
+            Pred P has multiple successors? No
+  Finished Checking Block: if.end
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %mul2 = mul nsw i32 %a, %b ->   %lcm.tmp1 = mul i32 %a, %b
+  Marking replacement:   %add3 = add nsw i32 %y.0, %z.0 ->   %lcm.tmp6 = add i32 %y.0, %z.0
+  Marking replacement:   %sub = sub nsw i32 %add, 1 ->   %lcm.tmp5 = sub i32 %add, 1
+  Marking replacement:   %mul = mul nsw i32 %a, %b ->   %lcm.tmp1 = mul i32 %a, %b
+  Marking replacement:   %add = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %add1 = add nsw i32 %add, 1 ->   %lcm.tmp3 = add i32 %add, 1
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %lcm.tmp3 = add i32 %add, 1 (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %add1 = add nsw i32 %add, 1 (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %lcm.tmp5 = sub i32 %add, 1 (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %sub = sub nsw i32 %add, 1 (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %y.0 = phi i32 [ %mul, %if.then ], [ %mul2, %if.else ] (%mul -> %lcm.tmp1)
+  Replacing operand 1 of:   %y.0 = phi i32 [ %lcm.tmp1, %if.then ], [ %mul2, %if.else ] (%mul2 -> %lcm.tmp1)
+  Replacing operand 0 of:   %z.0 = phi i32 [ %add1, %if.then ], [ %sub, %if.else ] (%add1 -> %lcm.tmp3)
+  Replacing operand 1 of:   %z.0 = phi i32 [ %lcm.tmp3, %if.then ], [ %sub, %if.else ] (%sub -> %lcm.tmp5)
+  Replacing operand 0 of:   ret i32 %add3 (%add3 -> %lcm.tmp6)
+  Deleting dead instructions...
+    Deleting:   %mul2 = mul nsw i32 %a, %b
+    Deleting:   %add3 = add nsw i32 %y.0, %z.0
+    Deleting:   %sub = sub nsw i32 %lcm.tmp, 1
+    Deleting:   %mul = mul nsw i32 %a, %b
+    Deleting:   %add = add nsw i32 %a, %b
+    Deleting:   %add1 = add nsw i32 %lcm.tmp, 1
+  Deleted 6 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ 
+
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ clang-17 -fno-discard-value-names -Xclang -disable-O0-optnone -O0 -emit-llvm -c Tests/test3.c -o Tests/test3.O0.no-optnone.bc
+opt-17 -passes=mem2reg Tests/test3.O0.no-optnone.bc -o Tests/test3.mem2reg.bc
+llvm-dis-17 Tests/test3.mem2reg.bc -o Tests/test3.mem2reg.ll
+opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test3.mem2reg.bc -o Tests/test3.lcm-L.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: loop_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: y.0 + add1
+  2: i.0 + 1
+  3: y.0 + add
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	y.0 + add
+  In	
+  Out	a + b
+---
+Basic Block for.cond
+  gen	
+  kill	
+  In	a + b
+  Out	a + b
+---
+Basic Block for.body
+  gen	a + b, y.0 + add1
+  kill	
+  In	a + b
+  Out	a + b, y.0 + add1
+---
+Basic Block for.inc
+  gen	i.0 + 1
+  kill	
+  In	a + b, y.0 + add1
+  Out	a + b, y.0 + add1, i.0 + 1
+---
+Basic Block for.end
+  gen	y.0 + add
+  kill	
+  In	a + b
+  Out	a + b, y.0 + add
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: loop_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: y.0 + add1
+  2: i.0 + 1
+  3: y.0 + add
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	y.0 + add
+  In	a + b
+  Out	y.0 + add
+---
+Basic Block for.cond
+  gen	
+  kill	
+  In	y.0 + add
+  Out	y.0 + add
+---
+Basic Block for.body
+  gen	a + b
+  kill	y.0 + add1
+  In	a + b, i.0 + 1, y.0 + add
+  Out	i.0 + 1, y.0 + add
+---
+Basic Block for.inc
+  gen	i.0 + 1
+  kill	
+  In	i.0 + 1, y.0 + add
+  Out	y.0 + add
+---
+Basic Block for.end
+  gen	y.0 + add
+  kill	
+  In	y.0 + add
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: loop_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: y.0 + add1
+  2: i.0 + 1
+  3: y.0 + add
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	a + b
+  In	y.0 + add1, i.0 + 1
+  Out	a + b, y.0 + add1, i.0 + 1
+---
+Basic Block for.cond
+  gen	y.0 + add1, i.0 + 1
+  kill	
+  In	a + b, y.0 + add1, i.0 + 1
+  Out	a + b
+---
+Basic Block for.body
+  gen	
+  kill	a + b, y.0 + add1
+  In	
+  Out	a + b, y.0 + add1
+---
+Basic Block for.inc
+  gen	
+  kill	i.0 + 1
+  In	a + b, y.0 + add1
+  Out	a + b, y.0 + add1, i.0 + 1
+---
+Basic Block for.end
+  gen	a + b
+  kill	y.0 + add
+  In	a + b
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Latest Mode)...
+  Inserted:   %lcm.tmp = add i32 %a, %b into entry
+  Skipped Insertion (Dominance): y.0 + add1 in entry
+  Skipped Insertion (Dominance): i.0 + 1 in entry
+  Inserted:   %lcm.tmp1 = add i32 %i.0, 1 into for.body
+  Inserted:   %lcm.tmp2 = add i32 %i.0, 1 into for.inc
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: for.cond
+    Block for.cond has multiple predecessors? Yes
+    AVAIL_IN : a + b
+    ANTIC_IN : y.0 + add
+      Checking Expr 0 [a + b]: ANTIC=0, AVAIL=1
+      Checking Expr 1 [y.0 + add1]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [i.0 + 1]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [y.0 + add]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 3 [y.0 + add]
+        Checking Predecessors:
+          Pred P: for.inc
+            Pred P has multiple successors? No
+          Pred P: entry
+            Pred P has multiple successors? No
+  Finished Checking Block: for.cond
+  Checking Block: for.body
+    Block for.body has multiple predecessors? No
+  Finished Checking Block: for.body
+  Checking Block: for.inc
+    Block for.inc has multiple predecessors? No
+  Finished Checking Block: for.inc
+  Checking Block: for.end
+    Block for.end has multiple predecessors? No
+  Finished Checking Block: for.end
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %inc = add nsw i32 %i.0, 1 ->   %lcm.tmp1 = add i32 %i.0, 1
+  Marking replacement:   %add = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %add1 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 1 of:   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ] (%inc -> %lcm.tmp1)
+  Replacing operand 1 of:   %add2 = add nsw i32 %y.0, %add1 (%add1 -> %lcm.tmp)
+  Replacing operand 1 of:   %add3 = add nsw i32 %y.0, %add (%add -> %lcm.tmp)
+  Deleting dead instructions...
+    Deleting:   %inc = add nsw i32 %i.0, 1
+    Deleting:   %add = add nsw i32 %a, %b
+    Deleting:   %add1 = add nsw i32 %a, %b
+  Deleted 3 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test3.mem2reg.bc -o Tests/test3.lcm-E.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: loop_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: y.0 + add1
+  2: i.0 + 1
+  3: y.0 + add
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	y.0 + add
+  In	
+  Out	a + b
+---
+Basic Block for.cond
+  gen	
+  kill	
+  In	a + b
+  Out	a + b
+---
+Basic Block for.body
+  gen	a + b, y.0 + add1
+  kill	
+  In	a + b
+  Out	a + b, y.0 + add1
+---
+Basic Block for.inc
+  gen	i.0 + 1
+  kill	
+  In	a + b, y.0 + add1
+  Out	a + b, y.0 + add1, i.0 + 1
+---
+Basic Block for.end
+  gen	y.0 + add
+  kill	
+  In	a + b
+  Out	a + b, y.0 + add
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: loop_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: y.0 + add1
+  2: i.0 + 1
+  3: y.0 + add
+-------------------------------------------------
+
+Basic Block entry
+  gen	a + b
+  kill	y.0 + add
+  In	a + b
+  Out	y.0 + add
+---
+Basic Block for.cond
+  gen	
+  kill	
+  In	y.0 + add
+  Out	y.0 + add
+---
+Basic Block for.body
+  gen	a + b
+  kill	y.0 + add1
+  In	a + b, i.0 + 1, y.0 + add
+  Out	i.0 + 1, y.0 + add
+---
+Basic Block for.inc
+  gen	i.0 + 1
+  kill	
+  In	i.0 + 1, y.0 + add
+  Out	y.0 + add
+---
+Basic Block for.end
+  gen	y.0 + add
+  kill	
+  In	y.0 + add
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: loop_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: y.0 + add1
+  2: i.0 + 1
+  3: y.0 + add
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	a + b
+  In	y.0 + add1, i.0 + 1
+  Out	a + b, y.0 + add1, i.0 + 1
+---
+Basic Block for.cond
+  gen	y.0 + add1, i.0 + 1
+  kill	
+  In	a + b, y.0 + add1, i.0 + 1
+  Out	a + b
+---
+Basic Block for.body
+  gen	
+  kill	a + b, y.0 + add1
+  In	
+  Out	a + b, y.0 + add1
+---
+Basic Block for.inc
+  gen	
+  kill	i.0 + 1
+  In	a + b, y.0 + add1
+  Out	a + b, y.0 + add1, i.0 + 1
+---
+Basic Block for.end
+  gen	a + b
+  kill	y.0 + add
+  In	a + b
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Earliest Mode)...
+  Inserted:   %lcm.tmp = add i32 %a, %b into entry
+  Inserted:   %lcm.tmp1 = add i32 %y.0, %add into for.cond
+  Inserted:   %lcm.tmp2 = add i32 %i.0, 1 into for.body
+  Inserted:   %lcm.tmp3 = add i32 %y.0, %add into for.body
+  Inserted:   %lcm.tmp4 = add i32 %i.0, 1 into for.inc
+  Inserted:   %lcm.tmp5 = add i32 %y.0, %add into for.inc
+  Inserted:   %lcm.tmp6 = add i32 %y.0, %add into for.end
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: for.cond
+    Block for.cond has multiple predecessors? Yes
+    AVAIL_IN : a + b
+    ANTIC_IN : y.0 + add
+      Checking Expr 0 [a + b]: ANTIC=0, AVAIL=1
+      Checking Expr 1 [y.0 + add1]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [i.0 + 1]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [y.0 + add]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 3 [y.0 + add]
+        Checking Predecessors:
+          Pred P: for.inc
+            Pred P has multiple successors? No
+          Pred P: entry
+            Pred P has multiple successors? No
+  Finished Checking Block: for.cond
+  Checking Block: for.body
+    Block for.body has multiple predecessors? No
+  Finished Checking Block: for.body
+  Checking Block: for.inc
+    Block for.inc has multiple predecessors? No
+  Finished Checking Block: for.inc
+  Checking Block: for.end
+    Block for.end has multiple predecessors? No
+  Finished Checking Block: for.end
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %add3 = add nsw i32 %y.0, %add ->   %lcm.tmp1 = add i32 %y.0, %add
+  Marking replacement:   %inc = add nsw i32 %i.0, 1 ->   %lcm.tmp2 = add i32 %i.0, 1
+  Marking replacement:   %add1 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %add = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 1 of:   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ] (%inc -> %lcm.tmp2)
+  Replacing operand 1 of:   %lcm.tmp1 = add i32 %y.0, %add (%add -> %lcm.tmp)
+  Replacing operand 1 of:   %lcm.tmp3 = add i32 %y.0, %add (%add -> %lcm.tmp)
+  Replacing operand 1 of:   %add2 = add nsw i32 %y.0, %add1 (%add1 -> %lcm.tmp)
+  Replacing operand 1 of:   %lcm.tmp5 = add i32 %y.0, %add (%add -> %lcm.tmp)
+  Replacing operand 1 of:   %lcm.tmp6 = add i32 %y.0, %add (%add -> %lcm.tmp)
+  Replacing operand 1 of:   %add3 = add nsw i32 %y.0, %add (%add -> %lcm.tmp)
+  Replacing operand 0 of:   ret i32 %add3 (%add3 -> %lcm.tmp1)
+  Deleting dead instructions...
+    Deleting:   %add3 = add nsw i32 %y.0, %lcm.tmp
+    Deleting:   %inc = add nsw i32 %i.0, 1
+    Deleting:   %add1 = add nsw i32 %a, %b
+    Deleting:   %add = add nsw i32 %a, %b
+  Deleted 4 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ 
+
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ clang-17 -fno-discard-value-names -Xclang -disable-O0-optnone -O0 -emit-llvm -c Tests/test4.c -o Tests/test4.O0.no-optnone.bc
+opt-17 -passes=mem2reg Tests/test4.O0.no-optnone.bc -o Tests/test4.mem2reg.bc
+llvm-dis-17 Tests/test4.mem2reg.bc -o Tests/test4.mem2reg.ll
+opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test4.mem2reg.bc -o Tests/test4.lcm-L.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: nested_if_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: c * d
+  1: c + d
+  2: c - d
+  3: x.1 + y.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.then
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.then2
+  gen	c * d
+  kill	
+  In	
+  Out	c * d
+---
+Basic Block if.else
+  gen	c + d
+  kill	
+  In	
+  Out	c + d
+---
+Basic Block if.end
+  gen	c * d
+  kill	
+  In	
+  Out	c * d
+---
+Basic Block if.else4
+  gen	c * d, c - d
+  kill	
+  In	
+  Out	c * d, c - d
+---
+Basic Block if.end6
+  gen	x.1 + y.0
+  kill	
+  In	c * d
+  Out	c * d, x.1 + y.0
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: nested_if_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: c * d
+  1: c + d
+  2: c - d
+  3: x.1 + y.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	c * d, x.1 + y.0
+  Out	c * d, x.1 + y.0
+---
+Basic Block if.then
+  gen	
+  kill	
+  In	c * d, x.1 + y.0
+  Out	c * d, x.1 + y.0
+---
+Basic Block if.then2
+  gen	c * d
+  kill	
+  In	c * d, x.1 + y.0
+  Out	c * d, x.1 + y.0
+---
+Basic Block if.else
+  gen	c + d
+  kill	
+  In	c * d, c + d, x.1 + y.0
+  Out	c * d, x.1 + y.0
+---
+Basic Block if.end
+  gen	c * d
+  kill	
+  In	c * d, x.1 + y.0
+  Out	x.1 + y.0
+---
+Basic Block if.else4
+  gen	c * d, c - d
+  kill	
+  In	c * d, c - d, x.1 + y.0
+  Out	x.1 + y.0
+---
+Basic Block if.end6
+  gen	x.1 + y.0
+  kill	
+  In	x.1 + y.0
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: nested_if_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: c * d
+  1: c + d
+  2: c - d
+  3: x.1 + y.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	c + d, c - d
+  Out	c + d, c - d
+---
+Basic Block if.then
+  gen	
+  kill	
+  In	c + d, c - d
+  Out	c + d, c - d
+---
+Basic Block if.then2
+  gen	
+  kill	c * d
+  In	c + d, c - d
+  Out	c + d, c - d
+---
+Basic Block if.else
+  gen	
+  kill	c + d
+  In	c - d
+  Out	c + d, c - d
+---
+Basic Block if.end
+  gen	c + d
+  kill	c * d
+  In	c + d, c - d
+  Out	c - d
+---
+Basic Block if.else4
+  gen	
+  kill	c * d, c - d
+  In	
+  Out	c - d
+---
+Basic Block if.end6
+  gen	c - d
+  kill	x.1 + y.0
+  In	c - d
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Latest Mode)...
+  Inserted:   %lcm.tmp = mul i32 %c, %d into entry
+  Inserted:   %lcm.tmp1 = add i32 %c, %d into entry
+  Inserted:   %lcm.tmp2 = sub i32 %c, %d into entry
+  Skipped Insertion (Dominance): x.1 + y.0 in entry
+  Inserted:   %lcm.tmp3 = mul i32 %c, %d into if.then
+  Skipped Insertion (Dominance): x.1 + y.0 in if.then
+  Inserted:   %lcm.tmp4 = mul i32 %c, %d into if.then2
+  Skipped Insertion (Dominance): x.1 + y.0 in if.then2
+  Inserted:   %lcm.tmp5 = mul i32 %c, %d into if.else
+  Inserted:   %lcm.tmp6 = add i32 %c, %d into if.else
+  Skipped Insertion (Dominance): x.1 + y.0 in if.else
+  Inserted:   %lcm.tmp7 = mul i32 %c, %d into if.end
+  Skipped Insertion (Dominance): x.1 + y.0 in if.end
+  Inserted:   %lcm.tmp8 = mul i32 %c, %d into if.else4
+  Inserted:   %lcm.tmp9 = sub i32 %c, %d into if.else4
+  Skipped Insertion (Dominance): x.1 + y.0 in if.else4
+  Inserted:   %lcm.tmp10 = add i32 %x.1, %y.0 into if.end6
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.then2
+    Block if.then2 has multiple predecessors? No
+  Finished Checking Block: if.then2
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : 
+    ANTIC_IN : c * d, x.1 + y.0
+      Checking Expr 0 [c * d]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 0 [c * d]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then2
+            Pred P has multiple successors? No
+      Checking Expr 1 [c + d]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [c - d]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [x.1 + y.0]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 3 [x.1 + y.0]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then2
+            Pred P has multiple successors? No
+  Finished Checking Block: if.end
+  Checking Block: if.else4
+    Block if.else4 has multiple predecessors? No
+  Finished Checking Block: if.else4
+  Checking Block: if.end6
+    Block if.end6 has multiple predecessors? Yes
+    AVAIL_IN : c * d
+    ANTIC_IN : x.1 + y.0
+      Checking Expr 0 [c * d]: ANTIC=0, AVAIL=1
+      Checking Expr 1 [c + d]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [c - d]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [x.1 + y.0]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 3 [x.1 + y.0]
+        Checking Predecessors:
+          Pred P: if.else4
+            Pred P has multiple successors? No
+          Pred P: if.end
+            Pred P has multiple successors? No
+  Finished Checking Block: if.end6
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %sub = sub nsw i32 %c, %d ->   %lcm.tmp2 = sub i32 %c, %d
+  Marking replacement:   %add = add nsw i32 %c, %d ->   %lcm.tmp1 = add i32 %c, %d
+  Marking replacement:   %mul5 = mul nsw i32 %c, %d ->   %lcm.tmp = mul i32 %c, %d
+  Marking replacement:   %mul3 = mul nsw i32 %c, %d ->   %lcm.tmp = mul i32 %c, %d
+  Marking replacement:   %mul = mul nsw i32 %c, %d ->   %lcm.tmp = mul i32 %c, %d
+  Marking replacement:   %add7 = add nsw i32 %x.1, %y.0 ->   %lcm.tmp10 = add i32 %x.1, %y.0
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %x.0 = phi i32 [ %mul, %if.then2 ], [ %add, %if.else ] (%mul -> %lcm.tmp)
+  Replacing operand 1 of:   %x.0 = phi i32 [ %lcm.tmp, %if.then2 ], [ %add, %if.else ] (%add -> %lcm.tmp1)
+  Replacing operand 1 of:   %x.1 = phi i32 [ %x.0, %if.end ], [ %sub, %if.else4 ] (%sub -> %lcm.tmp2)
+  Replacing operand 0 of:   %y.0 = phi i32 [ %mul3, %if.end ], [ %mul5, %if.else4 ] (%mul3 -> %lcm.tmp)
+  Replacing operand 1 of:   %y.0 = phi i32 [ %lcm.tmp, %if.end ], [ %mul5, %if.else4 ] (%mul5 -> %lcm.tmp)
+  Replacing operand 0 of:   ret i32 %add7 (%add7 -> %lcm.tmp10)
+  Deleting dead instructions...
+    Deleting:   %sub = sub nsw i32 %c, %d
+    Deleting:   %add = add nsw i32 %c, %d
+    Deleting:   %mul5 = mul nsw i32 %c, %d
+    Deleting:   %mul3 = mul nsw i32 %c, %d
+    Deleting:   %mul = mul nsw i32 %c, %d
+    Deleting:   %add7 = add nsw i32 %x.1, %y.0
+  Deleted 6 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test4.mem2reg.bc -o Tests/test4.lcm-E.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: nested_if_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: c * d
+  1: c + d
+  2: c - d
+  3: x.1 + y.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.then
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.then2
+  gen	c * d
+  kill	
+  In	
+  Out	c * d
+---
+Basic Block if.else
+  gen	c + d
+  kill	
+  In	
+  Out	c + d
+---
+Basic Block if.end
+  gen	c * d
+  kill	
+  In	
+  Out	c * d
+---
+Basic Block if.else4
+  gen	c * d, c - d
+  kill	
+  In	
+  Out	c * d, c - d
+---
+Basic Block if.end6
+  gen	x.1 + y.0
+  kill	
+  In	c * d
+  Out	c * d, x.1 + y.0
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: nested_if_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: c * d
+  1: c + d
+  2: c - d
+  3: x.1 + y.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	c * d, x.1 + y.0
+  Out	c * d, x.1 + y.0
+---
+Basic Block if.then
+  gen	
+  kill	
+  In	c * d, x.1 + y.0
+  Out	c * d, x.1 + y.0
+---
+Basic Block if.then2
+  gen	c * d
+  kill	
+  In	c * d, x.1 + y.0
+  Out	c * d, x.1 + y.0
+---
+Basic Block if.else
+  gen	c + d
+  kill	
+  In	c * d, c + d, x.1 + y.0
+  Out	c * d, x.1 + y.0
+---
+Basic Block if.end
+  gen	c * d
+  kill	
+  In	c * d, x.1 + y.0
+  Out	x.1 + y.0
+---
+Basic Block if.else4
+  gen	c * d, c - d
+  kill	
+  In	c * d, c - d, x.1 + y.0
+  Out	x.1 + y.0
+---
+Basic Block if.end6
+  gen	x.1 + y.0
+  kill	
+  In	x.1 + y.0
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: nested_if_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: c * d
+  1: c + d
+  2: c - d
+  3: x.1 + y.0
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	c + d, c - d
+  Out	c + d, c - d
+---
+Basic Block if.then
+  gen	
+  kill	
+  In	c + d, c - d
+  Out	c + d, c - d
+---
+Basic Block if.then2
+  gen	
+  kill	c * d
+  In	c + d, c - d
+  Out	c + d, c - d
+---
+Basic Block if.else
+  gen	
+  kill	c + d
+  In	c - d
+  Out	c + d, c - d
+---
+Basic Block if.end
+  gen	c + d
+  kill	c * d
+  In	c + d, c - d
+  Out	c - d
+---
+Basic Block if.else4
+  gen	
+  kill	c * d, c - d
+  In	
+  Out	c - d
+---
+Basic Block if.end6
+  gen	c - d
+  kill	x.1 + y.0
+  In	c - d
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Earliest Mode)...
+  Inserted:   %lcm.tmp = mul i32 %c, %d into entry
+  Skipped Insertion (Dominance): x.1 + y.0 in entry
+  Inserted:   %lcm.tmp1 = mul i32 %c, %d into if.then
+  Skipped Insertion (Dominance): x.1 + y.0 in if.then
+  Inserted:   %lcm.tmp2 = mul i32 %c, %d into if.then2
+  Skipped Insertion (Dominance): x.1 + y.0 in if.then2
+  Inserted:   %lcm.tmp3 = mul i32 %c, %d into if.else
+  Inserted:   %lcm.tmp4 = add i32 %c, %d into if.else
+  Skipped Insertion (Dominance): x.1 + y.0 in if.else
+  Inserted:   %lcm.tmp5 = mul i32 %c, %d into if.end
+  Skipped Insertion (Dominance): x.1 + y.0 in if.end
+  Inserted:   %lcm.tmp6 = mul i32 %c, %d into if.else4
+  Inserted:   %lcm.tmp7 = sub i32 %c, %d into if.else4
+  Skipped Insertion (Dominance): x.1 + y.0 in if.else4
+  Inserted:   %lcm.tmp8 = add i32 %x.1, %y.0 into if.end6
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.then2
+    Block if.then2 has multiple predecessors? No
+  Finished Checking Block: if.then2
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : 
+    ANTIC_IN : c * d, x.1 + y.0
+      Checking Expr 0 [c * d]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 0 [c * d]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then2
+            Pred P has multiple successors? No
+      Checking Expr 1 [c + d]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [c - d]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [x.1 + y.0]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 3 [x.1 + y.0]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then2
+            Pred P has multiple successors? No
+  Finished Checking Block: if.end
+  Checking Block: if.else4
+    Block if.else4 has multiple predecessors? No
+  Finished Checking Block: if.else4
+  Checking Block: if.end6
+    Block if.end6 has multiple predecessors? Yes
+    AVAIL_IN : c * d
+    ANTIC_IN : x.1 + y.0
+      Checking Expr 0 [c * d]: ANTIC=0, AVAIL=1
+      Checking Expr 1 [c + d]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [c - d]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [x.1 + y.0]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 3 [x.1 + y.0]
+        Checking Predecessors:
+          Pred P: if.else4
+            Pred P has multiple successors? No
+          Pred P: if.end
+            Pred P has multiple successors? No
+  Finished Checking Block: if.end6
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %mul3 = mul nsw i32 %c, %d ->   %lcm.tmp = mul i32 %c, %d
+  Marking replacement:   %mul = mul nsw i32 %c, %d ->   %lcm.tmp = mul i32 %c, %d
+  Marking replacement:   %add7 = add nsw i32 %x.1, %y.0 ->   %lcm.tmp8 = add i32 %x.1, %y.0
+  Marking replacement:   %sub = sub nsw i32 %c, %d ->   %lcm.tmp7 = sub i32 %c, %d
+  Marking replacement:   %add = add nsw i32 %c, %d ->   %lcm.tmp4 = add i32 %c, %d
+  Marking replacement:   %mul5 = mul nsw i32 %c, %d ->   %lcm.tmp = mul i32 %c, %d
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %x.0 = phi i32 [ %mul, %if.then2 ], [ %add, %if.else ] (%mul -> %lcm.tmp)
+  Replacing operand 1 of:   %x.0 = phi i32 [ %lcm.tmp, %if.then2 ], [ %add, %if.else ] (%add -> %lcm.tmp4)
+  Replacing operand 1 of:   %x.1 = phi i32 [ %x.0, %if.end ], [ %sub, %if.else4 ] (%sub -> %lcm.tmp7)
+  Replacing operand 0 of:   %y.0 = phi i32 [ %mul3, %if.end ], [ %mul5, %if.else4 ] (%mul3 -> %lcm.tmp)
+  Replacing operand 1 of:   %y.0 = phi i32 [ %lcm.tmp, %if.end ], [ %mul5, %if.else4 ] (%mul5 -> %lcm.tmp)
+  Replacing operand 0 of:   ret i32 %add7 (%add7 -> %lcm.tmp8)
+  Deleting dead instructions...
+    Deleting:   %mul3 = mul nsw i32 %c, %d
+    Deleting:   %mul = mul nsw i32 %c, %d
+    Deleting:   %add7 = add nsw i32 %x.1, %y.0
+    Deleting:   %sub = sub nsw i32 %c, %d
+    Deleting:   %add = add nsw i32 %c, %d
+    Deleting:   %mul5 = mul nsw i32 %c, %d
+  Deleted 6 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ 
+
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ clang-17 -fno-discard-value-names -Xclang -disable-O0-optnone -O0 -emit-llvm -c Tests/test5.c -o Tests/test5.O0.no-optnone.bc
+opt-17 -passes=mem2reg Tests/test5.O0.no-optnone.bc -o Tests/test5.mem2reg.bc
+llvm-dis-17 Tests/test5.mem2reg.bc -o Tests/test5.mem2reg.ll
+opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test5.mem2reg.bc -o Tests/test5.lcm-L.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: complex_cfg
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: b + c
+  1: a * 2
+  2: a * 3
+  3: b - c
+  4: a * 4
+  5: x.1 + y.1
+  6: add9 + add8
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.then
+  gen	b + c, a * 2
+  kill	
+  In	
+  Out	b + c, a * 2
+---
+Basic Block if.else
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.then2
+  gen	b + c, a * 3
+  kill	
+  In	
+  Out	b + c, a * 3
+---
+Basic Block if.else5
+  gen	b - c, a * 4
+  kill	
+  In	
+  Out	b - c, a * 4
+---
+Basic Block if.end
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.end7
+  gen	b + c, x.1 + y.1, add9 + add8
+  kill	
+  In	
+  Out	b + c, x.1 + y.1, add9 + add8
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: complex_cfg
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: b + c
+  1: a * 2
+  2: a * 3
+  3: b - c
+  4: a * 4
+  5: x.1 + y.1
+  6: add9 + add8
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	b + c, x.1 + y.1
+  Out	b + c, x.1 + y.1
+---
+Basic Block if.then
+  gen	b + c, a * 2
+  kill	
+  In	b + c, a * 2, x.1 + y.1
+  Out	b + c, x.1 + y.1
+---
+Basic Block if.else
+  gen	
+  kill	
+  In	b + c, x.1 + y.1
+  Out	b + c, x.1 + y.1
+---
+Basic Block if.then2
+  gen	b + c, a * 3
+  kill	
+  In	b + c, a * 3, x.1 + y.1
+  Out	b + c, x.1 + y.1
+---
+Basic Block if.else5
+  gen	b - c, a * 4
+  kill	
+  In	b + c, b - c, a * 4, x.1 + y.1
+  Out	b + c, x.1 + y.1
+---
+Basic Block if.end
+  gen	
+  kill	
+  In	b + c, x.1 + y.1
+  Out	b + c, x.1 + y.1
+---
+Basic Block if.end7
+  gen	b + c, x.1 + y.1
+  kill	add9 + add8
+  In	b + c, x.1 + y.1
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: complex_cfg
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: b + c
+  1: a * 2
+  2: a * 3
+  3: b - c
+  4: a * 4
+  5: x.1 + y.1
+  6: add9 + add8
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	a * 2, a * 3, b - c, a * 4
+  Out	a * 2, a * 3, b - c, a * 4
+---
+Basic Block if.then
+  gen	
+  kill	b + c, a * 2
+  In	
+  Out	a * 2
+---
+Basic Block if.else
+  gen	
+  kill	
+  In	a * 2, a * 3, b - c, a * 4
+  Out	a * 2, a * 3, b - c, a * 4
+---
+Basic Block if.then2
+  gen	
+  kill	b + c, a * 3
+  In	a * 2, b - c, a * 4
+  Out	a * 2, a * 3, b - c, a * 4
+---
+Basic Block if.else5
+  gen	
+  kill	b - c, a * 4
+  In	a * 2, a * 3
+  Out	a * 2, a * 3, b - c, a * 4
+---
+Basic Block if.end
+  gen	a * 3, b - c, a * 4
+  kill	
+  In	a * 2, a * 3, b - c, a * 4
+  Out	a * 2
+---
+Basic Block if.end7
+  gen	a * 2
+  kill	b + c, x.1 + y.1, add9 + add8
+  In	a * 2
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Latest Mode)...
+  Inserted:   %lcm.tmp = add i32 %b, %c into entry
+  Inserted:   %lcm.tmp1 = mul i32 %a, 2 into entry
+  Inserted:   %lcm.tmp2 = mul i32 %a, 3 into entry
+  Inserted:   %lcm.tmp3 = sub i32 %b, %c into entry
+  Inserted:   %lcm.tmp4 = mul i32 %a, 4 into entry
+  Skipped Insertion (Dominance): x.1 + y.1 in entry
+  Inserted:   %lcm.tmp5 = add i32 %b, %c into if.then
+  Inserted:   %lcm.tmp6 = mul i32 %a, 2 into if.then
+  Skipped Insertion (Dominance): x.1 + y.1 in if.then
+  Inserted:   %lcm.tmp7 = add i32 %b, %c into if.else
+  Skipped Insertion (Dominance): x.1 + y.1 in if.else
+  Inserted:   %lcm.tmp8 = add i32 %b, %c into if.then2
+  Inserted:   %lcm.tmp9 = mul i32 %a, 3 into if.then2
+  Skipped Insertion (Dominance): x.1 + y.1 in if.then2
+  Inserted:   %lcm.tmp10 = add i32 %b, %c into if.else5
+  Inserted:   %lcm.tmp11 = sub i32 %b, %c into if.else5
+  Inserted:   %lcm.tmp12 = mul i32 %a, 4 into if.else5
+  Skipped Insertion (Dominance): x.1 + y.1 in if.else5
+  Inserted:   %lcm.tmp13 = add i32 %b, %c into if.end
+  Skipped Insertion (Dominance): x.1 + y.1 in if.end
+  Inserted:   %lcm.tmp14 = add i32 %b, %c into if.end7
+  Inserted:   %lcm.tmp15 = add i32 %x.1, %y.1 into if.end7
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.then2
+    Block if.then2 has multiple predecessors? No
+  Finished Checking Block: if.then2
+  Checking Block: if.else5
+    Block if.else5 has multiple predecessors? No
+  Finished Checking Block: if.else5
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : 
+    ANTIC_IN : b + c, x.1 + y.1
+      Checking Expr 0 [b + c]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 0 [b + c]
+        Checking Predecessors:
+          Pred P: if.else5
+            Pred P has multiple successors? No
+          Pred P: if.then2
+            Pred P has multiple successors? No
+      Checking Expr 1 [a * 2]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [a * 3]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [b - c]: ANTIC=0, AVAIL=0
+      Checking Expr 4 [a * 4]: ANTIC=0, AVAIL=0
+      Checking Expr 5 [x.1 + y.1]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 5 [x.1 + y.1]
+        Checking Predecessors:
+          Pred P: if.else5
+            Pred P has multiple successors? No
+          Pred P: if.then2
+            Pred P has multiple successors? No
+      Checking Expr 6 [add9 + add8]: ANTIC=0, AVAIL=0
+  Finished Checking Block: if.end
+  Checking Block: if.end7
+    Block if.end7 has multiple predecessors? Yes
+    AVAIL_IN : 
+    ANTIC_IN : b + c, x.1 + y.1
+      Checking Expr 0 [b + c]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 0 [b + c]
+        Checking Predecessors:
+          Pred P: if.end
+            Pred P has multiple successors? No
+          Pred P: if.then
+            Pred P has multiple successors? No
+      Checking Expr 1 [a * 2]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [a * 3]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [b - c]: ANTIC=0, AVAIL=0
+      Checking Expr 4 [a * 4]: ANTIC=0, AVAIL=0
+      Checking Expr 5 [x.1 + y.1]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 5 [x.1 + y.1]
+        Checking Predecessors:
+          Pred P: if.end
+            Pred P has multiple successors? No
+          Pred P: if.then
+            Pred P has multiple successors? No
+      Checking Expr 6 [add9 + add8]: ANTIC=0, AVAIL=0
+  Finished Checking Block: if.end7
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %sub = sub nsw i32 %b, %c ->   %lcm.tmp3 = sub i32 %b, %c
+  Marking replacement:   %mul4 = mul nsw i32 %a, 3 ->   %lcm.tmp2 = mul i32 %a, 3
+  Marking replacement:   %add3 = add nsw i32 %b, %c ->   %lcm.tmp = add i32 %b, %c
+  Marking replacement:   %mul6 = mul nsw i32 %a, 4 ->   %lcm.tmp4 = mul i32 %a, 4
+  Marking replacement:   %add8 = add nsw i32 %b, %c ->   %lcm.tmp = add i32 %b, %c
+  Marking replacement:   %add9 = add nsw i32 %x.1, %y.1 ->   %lcm.tmp15 = add i32 %x.1, %y.1
+  Marking replacement:   %mul = mul nsw i32 %a, 2 ->   %lcm.tmp1 = mul i32 %a, 2
+  Marking replacement:   %add = add nsw i32 %b, %c ->   %lcm.tmp = add i32 %b, %c
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %x.0 = phi i32 [ %add3, %if.then2 ], [ %sub, %if.else5 ] (%add3 -> %lcm.tmp)
+  Replacing operand 1 of:   %x.0 = phi i32 [ %lcm.tmp, %if.then2 ], [ %sub, %if.else5 ] (%sub -> %lcm.tmp3)
+  Replacing operand 0 of:   %y.0 = phi i32 [ %mul4, %if.then2 ], [ %mul6, %if.else5 ] (%mul4 -> %lcm.tmp2)
+  Replacing operand 1 of:   %y.0 = phi i32 [ %lcm.tmp2, %if.then2 ], [ %mul6, %if.else5 ] (%mul6 -> %lcm.tmp4)
+  Replacing operand 0 of:   %x.1 = phi i32 [ %add, %if.then ], [ %x.0, %if.end ] (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %y.1 = phi i32 [ %mul, %if.then ], [ %y.0, %if.end ] (%mul -> %lcm.tmp1)
+  Replacing operand 0 of:   %add10 = add nsw i32 %add9, %add8 (%add9 -> %lcm.tmp15)
+  Replacing operand 1 of:   %add10 = add nsw i32 %lcm.tmp15, %add8 (%add8 -> %lcm.tmp)
+  Deleting dead instructions...
+    Deleting:   %sub = sub nsw i32 %b, %c
+    Deleting:   %mul4 = mul nsw i32 %a, 3
+    Deleting:   %add3 = add nsw i32 %b, %c
+    Deleting:   %mul6 = mul nsw i32 %a, 4
+    Deleting:   %add8 = add nsw i32 %b, %c
+    Deleting:   %add9 = add nsw i32 %x.1, %y.1
+    Deleting:   %mul = mul nsw i32 %a, 2
+    Deleting:   %add = add nsw i32 %b, %c
+  Deleted 8 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test5.mem2reg.bc -o Tests/test5.lcm-E.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: complex_cfg
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: b + c
+  1: a * 2
+  2: a * 3
+  3: b - c
+  4: a * 4
+  5: x.1 + y.1
+  6: add9 + add8
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.then
+  gen	b + c, a * 2
+  kill	
+  In	
+  Out	b + c, a * 2
+---
+Basic Block if.else
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.then2
+  gen	b + c, a * 3
+  kill	
+  In	
+  Out	b + c, a * 3
+---
+Basic Block if.else5
+  gen	b - c, a * 4
+  kill	
+  In	
+  Out	b - c, a * 4
+---
+Basic Block if.end
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.end7
+  gen	b + c, x.1 + y.1, add9 + add8
+  kill	
+  In	
+  Out	b + c, x.1 + y.1, add9 + add8
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: complex_cfg
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: b + c
+  1: a * 2
+  2: a * 3
+  3: b - c
+  4: a * 4
+  5: x.1 + y.1
+  6: add9 + add8
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	b + c, x.1 + y.1
+  Out	b + c, x.1 + y.1
+---
+Basic Block if.then
+  gen	b + c, a * 2
+  kill	
+  In	b + c, a * 2, x.1 + y.1
+  Out	b + c, x.1 + y.1
+---
+Basic Block if.else
+  gen	
+  kill	
+  In	b + c, x.1 + y.1
+  Out	b + c, x.1 + y.1
+---
+Basic Block if.then2
+  gen	b + c, a * 3
+  kill	
+  In	b + c, a * 3, x.1 + y.1
+  Out	b + c, x.1 + y.1
+---
+Basic Block if.else5
+  gen	b - c, a * 4
+  kill	
+  In	b + c, b - c, a * 4, x.1 + y.1
+  Out	b + c, x.1 + y.1
+---
+Basic Block if.end
+  gen	
+  kill	
+  In	b + c, x.1 + y.1
+  Out	b + c, x.1 + y.1
+---
+Basic Block if.end7
+  gen	b + c, x.1 + y.1
+  kill	add9 + add8
+  In	b + c, x.1 + y.1
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: complex_cfg
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: b + c
+  1: a * 2
+  2: a * 3
+  3: b - c
+  4: a * 4
+  5: x.1 + y.1
+  6: add9 + add8
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	a * 2, a * 3, b - c, a * 4
+  Out	a * 2, a * 3, b - c, a * 4
+---
+Basic Block if.then
+  gen	
+  kill	b + c, a * 2
+  In	
+  Out	a * 2
+---
+Basic Block if.else
+  gen	
+  kill	
+  In	a * 2, a * 3, b - c, a * 4
+  Out	a * 2, a * 3, b - c, a * 4
+---
+Basic Block if.then2
+  gen	
+  kill	b + c, a * 3
+  In	a * 2, b - c, a * 4
+  Out	a * 2, a * 3, b - c, a * 4
+---
+Basic Block if.else5
+  gen	
+  kill	b - c, a * 4
+  In	a * 2, a * 3
+  Out	a * 2, a * 3, b - c, a * 4
+---
+Basic Block if.end
+  gen	a * 3, b - c, a * 4
+  kill	
+  In	a * 2, a * 3, b - c, a * 4
+  Out	a * 2
+---
+Basic Block if.end7
+  gen	a * 2
+  kill	b + c, x.1 + y.1, add9 + add8
+  In	a * 2
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Earliest Mode)...
+  Inserted:   %lcm.tmp = add i32 %b, %c into entry
+  Skipped Insertion (Dominance): x.1 + y.1 in entry
+  Inserted:   %lcm.tmp1 = add i32 %b, %c into if.then
+  Inserted:   %lcm.tmp2 = mul i32 %a, 2 into if.then
+  Skipped Insertion (Dominance): x.1 + y.1 in if.then
+  Inserted:   %lcm.tmp3 = add i32 %b, %c into if.else
+  Skipped Insertion (Dominance): x.1 + y.1 in if.else
+  Inserted:   %lcm.tmp4 = add i32 %b, %c into if.then2
+  Inserted:   %lcm.tmp5 = mul i32 %a, 3 into if.then2
+  Skipped Insertion (Dominance): x.1 + y.1 in if.then2
+  Inserted:   %lcm.tmp6 = add i32 %b, %c into if.else5
+  Inserted:   %lcm.tmp7 = sub i32 %b, %c into if.else5
+  Inserted:   %lcm.tmp8 = mul i32 %a, 4 into if.else5
+  Skipped Insertion (Dominance): x.1 + y.1 in if.else5
+  Inserted:   %lcm.tmp9 = add i32 %b, %c into if.end
+  Skipped Insertion (Dominance): x.1 + y.1 in if.end
+  Inserted:   %lcm.tmp10 = add i32 %b, %c into if.end7
+  Inserted:   %lcm.tmp11 = add i32 %x.1, %y.1 into if.end7
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.then2
+    Block if.then2 has multiple predecessors? No
+  Finished Checking Block: if.then2
+  Checking Block: if.else5
+    Block if.else5 has multiple predecessors? No
+  Finished Checking Block: if.else5
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : 
+    ANTIC_IN : b + c, x.1 + y.1
+      Checking Expr 0 [b + c]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 0 [b + c]
+        Checking Predecessors:
+          Pred P: if.else5
+            Pred P has multiple successors? No
+          Pred P: if.then2
+            Pred P has multiple successors? No
+      Checking Expr 1 [a * 2]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [a * 3]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [b - c]: ANTIC=0, AVAIL=0
+      Checking Expr 4 [a * 4]: ANTIC=0, AVAIL=0
+      Checking Expr 5 [x.1 + y.1]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 5 [x.1 + y.1]
+        Checking Predecessors:
+          Pred P: if.else5
+            Pred P has multiple successors? No
+          Pred P: if.then2
+            Pred P has multiple successors? No
+      Checking Expr 6 [add9 + add8]: ANTIC=0, AVAIL=0
+  Finished Checking Block: if.end
+  Checking Block: if.end7
+    Block if.end7 has multiple predecessors? Yes
+    AVAIL_IN : 
+    ANTIC_IN : b + c, x.1 + y.1
+      Checking Expr 0 [b + c]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 0 [b + c]
+        Checking Predecessors:
+          Pred P: if.end
+            Pred P has multiple successors? No
+          Pred P: if.then
+            Pred P has multiple successors? No
+      Checking Expr 1 [a * 2]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [a * 3]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [b - c]: ANTIC=0, AVAIL=0
+      Checking Expr 4 [a * 4]: ANTIC=0, AVAIL=0
+      Checking Expr 5 [x.1 + y.1]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 5 [x.1 + y.1]
+        Checking Predecessors:
+          Pred P: if.end
+            Pred P has multiple successors? No
+          Pred P: if.then
+            Pred P has multiple successors? No
+      Checking Expr 6 [add9 + add8]: ANTIC=0, AVAIL=0
+  Finished Checking Block: if.end7
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %add8 = add nsw i32 %b, %c ->   %lcm.tmp = add i32 %b, %c
+  Marking replacement:   %mul6 = mul nsw i32 %a, 4 ->   %lcm.tmp8 = mul i32 %a, 4
+  Marking replacement:   %add = add nsw i32 %b, %c ->   %lcm.tmp = add i32 %b, %c
+  Marking replacement:   %mul = mul nsw i32 %a, 2 ->   %lcm.tmp2 = mul i32 %a, 2
+  Marking replacement:   %sub = sub nsw i32 %b, %c ->   %lcm.tmp7 = sub i32 %b, %c
+  Marking replacement:   %mul4 = mul nsw i32 %a, 3 ->   %lcm.tmp5 = mul i32 %a, 3
+  Marking replacement:   %add3 = add nsw i32 %b, %c ->   %lcm.tmp = add i32 %b, %c
+  Marking replacement:   %add9 = add nsw i32 %x.1, %y.1 ->   %lcm.tmp11 = add i32 %x.1, %y.1
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %x.0 = phi i32 [ %add3, %if.then2 ], [ %sub, %if.else5 ] (%add3 -> %lcm.tmp)
+  Replacing operand 1 of:   %x.0 = phi i32 [ %lcm.tmp, %if.then2 ], [ %sub, %if.else5 ] (%sub -> %lcm.tmp7)
+  Replacing operand 0 of:   %y.0 = phi i32 [ %mul4, %if.then2 ], [ %mul6, %if.else5 ] (%mul4 -> %lcm.tmp5)
+  Replacing operand 1 of:   %y.0 = phi i32 [ %lcm.tmp5, %if.then2 ], [ %mul6, %if.else5 ] (%mul6 -> %lcm.tmp8)
+  Replacing operand 0 of:   %x.1 = phi i32 [ %add, %if.then ], [ %x.0, %if.end ] (%add -> %lcm.tmp)
+  Replacing operand 0 of:   %y.1 = phi i32 [ %mul, %if.then ], [ %y.0, %if.end ] (%mul -> %lcm.tmp2)
+  Replacing operand 0 of:   %add10 = add nsw i32 %add9, %add8 (%add9 -> %lcm.tmp11)
+  Replacing operand 1 of:   %add10 = add nsw i32 %lcm.tmp11, %add8 (%add8 -> %lcm.tmp)
+  Deleting dead instructions...
+    Deleting:   %add8 = add nsw i32 %b, %c
+    Deleting:   %mul6 = mul nsw i32 %a, 4
+    Deleting:   %add = add nsw i32 %b, %c
+    Deleting:   %mul = mul nsw i32 %a, 2
+    Deleting:   %sub = sub nsw i32 %b, %c
+    Deleting:   %mul4 = mul nsw i32 %a, 3
+    Deleting:   %add3 = add nsw i32 %b, %c
+    Deleting:   %add9 = add nsw i32 %x.1, %y.1
+  Deleted 8 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ 
+
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ clang-17 -fno-discard-value-names -Xclang -disable-O0-optnone -O0 -emit-llvm -c Tests/test6.c -o Tests/test6.O0.no-optnone.bc
+opt-17 -passes=mem2reg Tests/test6.O0.no-optnone.bc -o Tests/test6.mem2reg.bc
+llvm-dis-17 Tests/test6.mem2reg.bc -o Tests/test6.mem2reg.ll
+opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test6.mem2reg.bc -o Tests/test6.lcm-L.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: diff_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: x.0 + a
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.then
+  gen	a + b
+  kill	
+  In	
+  Out	a + b
+---
+Basic Block if.else
+  gen	a + b
+  kill	
+  In	
+  Out	a + b
+---
+Basic Block if.end
+  gen	x.0 + a
+  kill	
+  In	a + b
+  Out	a + b, x.0 + a
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: diff_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: x.0 + a
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	a + b, x.0 + a
+  Out	a + b, x.0 + a
+---
+Basic Block if.then
+  gen	a + b
+  kill	
+  In	a + b, x.0 + a
+  Out	x.0 + a
+---
+Basic Block if.else
+  gen	a + b
+  kill	
+  In	a + b, x.0 + a
+  Out	x.0 + a
+---
+Basic Block if.end
+  gen	x.0 + a
+  kill	
+  In	x.0 + a
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: diff_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: x.0 + a
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.then
+  gen	
+  kill	a + b
+  In	
+  Out	a + b
+---
+Basic Block if.else
+  gen	
+  kill	a + b
+  In	
+  Out	a + b
+---
+Basic Block if.end
+  gen	a + b
+  kill	x.0 + a
+  In	a + b
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Latest Mode)...
+  Inserted:   %lcm.tmp = add i32 %a, %b into entry
+  Skipped Insertion (Dominance): x.0 + a in entry
+  Inserted:   %lcm.tmp1 = add i32 %a, %b into if.then
+  Skipped Insertion (Dominance): x.0 + a in if.then
+  Inserted:   %lcm.tmp2 = add i32 %a, %b into if.else
+  Skipped Insertion (Dominance): x.0 + a in if.else
+  Inserted:   %lcm.tmp3 = add i32 %x.0, %a into if.end
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : a + b
+    ANTIC_IN : x.0 + a
+      Checking Expr 0 [a + b]: ANTIC=0, AVAIL=1
+      Checking Expr 1 [x.0 + a]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 1 [x.0 + a]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then
+            Pred P has multiple successors? No
+  Finished Checking Block: if.end
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %add = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %add1 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %add2 = add nsw i32 %x.0, %a ->   %lcm.tmp3 = add i32 %x.0, %a
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %x.0 = phi i32 [ %add, %if.then ], [ %add1, %if.else ] (%add -> %lcm.tmp)
+  Replacing operand 1 of:   %x.0 = phi i32 [ %lcm.tmp, %if.then ], [ %add1, %if.else ] (%add1 -> %lcm.tmp)
+  Replacing operand 0 of:   ret i32 %add2 (%add2 -> %lcm.tmp3)
+  Deleting dead instructions...
+    Deleting:   %add = add nsw i32 %a, %b
+    Deleting:   %add1 = add nsw i32 %a, %b
+    Deleting:   %add2 = add nsw i32 %x.0, %a
+  Deleted 3 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ rm -rf build
+mkdir build
+cd build
+cmake ..
+make clean && make
+cd ..
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llvm-config libs: -lLLVM-17
+-- llvm-config ldflags: -L/usr/lib/llvm-17/lib
+-- CMake configuration complete. Run 'make' in build directory to build UnifiedPass.so
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/vboxuser/Desktop/Vinodh_Punitha/build
+[ 50%] Building CXX object CMakeFiles/UnifiedPass.dir/unifiedpass.cpp.o
+[100%] Linking CXX shared module UnifiedPass.so
+[100%] Built target UnifiedPass
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test6.mem2reg.bc -o Tests/test6.lcm-E.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: diff_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: x.0 + a
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.then
+  gen	a + b
+  kill	
+  In	
+  Out	a + b
+---
+Basic Block if.else
+  gen	a + b
+  kill	
+  In	
+  Out	a + b
+---
+Basic Block if.end
+  gen	x.0 + a
+  kill	
+  In	a + b
+  Out	a + b, x.0 + a
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: diff_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: x.0 + a
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	a + b, x.0 + a
+  Out	a + b, x.0 + a
+---
+Basic Block if.then
+  gen	a + b
+  kill	
+  In	a + b, x.0 + a
+  Out	x.0 + a
+---
+Basic Block if.else
+  gen	a + b
+  kill	
+  In	a + b, x.0 + a
+  Out	x.0 + a
+---
+Basic Block if.end
+  gen	x.0 + a
+  kill	
+  In	x.0 + a
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: diff_test
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + b
+  1: x.0 + a
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.then
+  gen	
+  kill	a + b
+  In	
+  Out	a + b
+---
+Basic Block if.else
+  gen	
+  kill	a + b
+  In	
+  Out	a + b
+---
+Basic Block if.end
+  gen	a + b
+  kill	x.0 + a
+  In	a + b
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Earliest Mode)...
+  Inserted:   %lcm.tmp = add i32 %a, %b into entry
+  Skipped Insertion (Dominance): x.0 + a in entry
+  Inserted:   %lcm.tmp1 = add i32 %a, %b into if.then
+  Skipped Insertion (Dominance): x.0 + a in if.then
+  Inserted:   %lcm.tmp2 = add i32 %a, %b into if.else
+  Skipped Insertion (Dominance): x.0 + a in if.else
+  Inserted:   %lcm.tmp3 = add i32 %x.0, %a into if.end
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : a + b
+    ANTIC_IN : x.0 + a
+      Checking Expr 0 [a + b]: ANTIC=0, AVAIL=1
+      Checking Expr 1 [x.0 + a]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 1 [x.0 + a]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then
+            Pred P has multiple successors? No
+  Finished Checking Block: if.end
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %add2 = add nsw i32 %x.0, %a ->   %lcm.tmp3 = add i32 %x.0, %a
+  Marking replacement:   %add = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+  Marking replacement:   %add1 = add nsw i32 %a, %b ->   %lcm.tmp = add i32 %a, %b
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %x.0 = phi i32 [ %add, %if.then ], [ %add1, %if.else ] (%add -> %lcm.tmp)
+  Replacing operand 1 of:   %x.0 = phi i32 [ %lcm.tmp, %if.then ], [ %add1, %if.else ] (%add1 -> %lcm.tmp)
+  Replacing operand 0 of:   ret i32 %add2 (%add2 -> %lcm.tmp3)
+  Deleting dead instructions...
+    Deleting:   %add2 = add nsw i32 %x.0, %a
+    Deleting:   %add = add nsw i32 %a, %b
+    Deleting:   %add1 = add nsw i32 %a, %b
+  Deleted 3 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ 
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ clang-17 -fno-discard-value-names -Xclang -disable-O0-optnone -O0 -emit-llvm -c Tests/test7.c -o Tests/test7.O0.no-optnone.b\
+> 
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ clang-17 -fno-discard-value-names -Xclang -disable-O0-optnone -O0 -emit-llvm -c Tests/test7.c -o Tests/test7.O0.no-optnone.b
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -passes=mem2reg Tests/test7.O0.no-optnone.bc -o Tests/test7.mem2reg.bc
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ llvm-dis-17 Tests/test7.mem2reg.bc -o Tests/test7.O0.mem2reg.ll
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ clang-17 -O1 -emit-llvm -c Tests/test7.c -o Tests/test7.O1.bc
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -passes=mem2reg Tests/test7.O1.bc -o Tests/test7.O1.mem2reg.bc
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ llvm-dis-17 Tests/test7.O1.mem2reg.bc -o Tests/test7.O1.mem2reg.ll
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test7.mem2reg.bc -o Tests/test7.O0.lcm-final.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: test7_o0_vs_o1
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + x.0
+  1: add * 2
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.then
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.else
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.end
+  gen	a + x.0, add * 2
+  kill	
+  In	
+  Out	a + x.0, add * 2
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: test7_o0_vs_o1
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + x.0
+  1: add * 2
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	a + x.0
+  Out	a + x.0
+---
+Basic Block if.then
+  gen	
+  kill	
+  In	a + x.0
+  Out	a + x.0
+---
+Basic Block if.else
+  gen	
+  kill	
+  In	a + x.0
+  Out	a + x.0
+---
+Basic Block if.end
+  gen	a + x.0
+  kill	add * 2
+  In	a + x.0
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: test7_o0_vs_o1
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: a + x.0
+  1: add * 2
+-------------------------------------------------
+
+Basic Block entry
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.then
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.else
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block if.end
+  gen	
+  kill	a + x.0, add * 2
+  In	
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Latest Mode)...
+  Skipped Insertion (Dominance): a + x.0 in entry
+  Skipped Insertion (Dominance): a + x.0 in if.then
+  Skipped Insertion (Dominance): a + x.0 in if.else
+  Inserted:   %lcm.tmp = add i32 %a, %x.0 into if.end
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: entry
+    Block entry has multiple predecessors? No
+  Finished Checking Block: entry
+  Checking Block: if.then
+    Block if.then has multiple predecessors? No
+  Finished Checking Block: if.then
+  Checking Block: if.else
+    Block if.else has multiple predecessors? No
+  Finished Checking Block: if.else
+  Checking Block: if.end
+    Block if.end has multiple predecessors? Yes
+    AVAIL_IN : 
+    ANTIC_IN : a + x.0
+      Checking Expr 0 [a + x.0]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 0 [a + x.0]
+        Checking Predecessors:
+          Pred P: if.else
+            Pred P has multiple successors? No
+          Pred P: if.then
+            Pred P has multiple successors? No
+      Checking Expr 1 [add * 2]: ANTIC=0, AVAIL=0
+  Finished Checking Block: if.end
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %add = add nsw i32 %a, %x.0 ->   %lcm.tmp = add i32 %a, %x.0
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %mul = mul nsw i32 %add, 2 (%add -> %lcm.tmp)
+  Deleting dead instructions...
+    Deleting:   %add = add nsw i32 %a, %x.0
+  Deleted 1 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test7.O1.mem2reg.bc -o Tests/test7.O1.lcm-final.ll
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AvailableExpressions
+Function: test7_o0_vs_o1_v2
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: %1 + %0
+  1: %0 - %1
+  2: %1 * %0
+  3: %15 + 100
+-------------------------------------------------
+
+Basic Block <bb 0x56327dea9a20>
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block <bb 0x56327dead2f0>
+  gen	
+  kill	
+  In	
+  Out	
+---
+Basic Block <bb 0x56327dead200>
+  gen	%1 + %0
+  kill	
+  In	
+  Out	%1 + %0
+---
+Basic Block <bb 0x56327deb3400>
+  gen	%0 - %1
+  kill	
+  In	
+  Out	%0 - %1
+---
+Basic Block <bb 0x56327deb3450>
+  gen	%1 * %0
+  kill	
+  In	
+  Out	%1 * %0
+---
+Basic Block <bb 0x56327deb34a0>
+  gen	%15 + 100
+  kill	
+  In	
+  Out	%15 + 100
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::AnticipatedExpressions
+Function: test7_o0_vs_o1_v2
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: %1 + %0
+  1: %0 - %1
+  2: %1 * %0
+  3: %15 + 100
+-------------------------------------------------
+
+Basic Block <bb 0x56327dea9a20>
+  gen	
+  kill	
+  In	%15 + 100
+  Out	%15 + 100
+---
+Basic Block <bb 0x56327dead2f0>
+  gen	
+  kill	
+  In	%15 + 100
+  Out	%15 + 100
+---
+Basic Block <bb 0x56327dead200>
+  gen	%1 + %0
+  kill	
+  In	%1 + %0, %15 + 100
+  Out	%15 + 100
+---
+Basic Block <bb 0x56327deb3400>
+  gen	%0 - %1
+  kill	
+  In	%0 - %1, %15 + 100
+  Out	%15 + 100
+---
+Basic Block <bb 0x56327deb3450>
+  gen	%1 * %0
+  kill	
+  In	%1 * %0, %15 + 100
+  Out	%15 + 100
+---
+Basic Block <bb 0x56327deb34a0>
+  gen	%15 + 100
+  kill	
+  In	%15 + 100
+  Out	
+---
+=================================================
+
+
+=================================================
+Dataflow Results for: UnifiedPass::UnifiedPass::UsedExpressions
+Function: test7_o0_vs_o1_v2
+-------------------------------------------------
+Expression Domain (Index: Expression):
+  0: %1 + %0
+  1: %0 - %1
+  2: %1 * %0
+  3: %15 + 100
+-------------------------------------------------
+
+Basic Block <bb 0x56327dea9a20>
+  gen	
+  kill	
+  In	%1 + %0, %0 - %1, %1 * %0
+  Out	%1 + %0, %0 - %1, %1 * %0
+---
+Basic Block <bb 0x56327dead2f0>
+  gen	
+  kill	
+  In	%1 + %0, %0 - %1, %1 * %0
+  Out	%1 + %0, %0 - %1, %1 * %0
+---
+Basic Block <bb 0x56327dead200>
+  gen	
+  kill	%1 + %0
+  In	%0 - %1, %1 * %0
+  Out	%1 + %0, %0 - %1, %1 * %0
+---
+Basic Block <bb 0x56327deb3400>
+  gen	
+  kill	%0 - %1
+  In	%1 + %0, %1 * %0
+  Out	%1 + %0, %0 - %1, %1 * %0
+---
+Basic Block <bb 0x56327deb3450>
+  gen	
+  kill	%1 * %0
+  In	%1 + %0, %0 - %1
+  Out	%1 + %0, %0 - %1, %1 * %0
+---
+Basic Block <bb 0x56327deb34a0>
+  gen	%1 + %0, %0 - %1, %1 * %0
+  kill	%15 + 100
+  In	%1 + %0, %0 - %1, %1 * %0
+  Out	
+---
+=================================================
+
+LCM: Calculating EARLIEST sets...
+LCM: Calculating LATEST_IN sets...
+LCM: Calculating INSERT sets...
+LCM: Phase 1 - Inserting temporary computations (Latest Mode)...
+  Inserted:   %lcm.tmp = add i32 %1, %0 into <anon>
+  Inserted:   %lcm.tmp1 = sub i32 %0, %1 into <anon>
+  Inserted:   %lcm.tmp2 = mul i32 %1, %0 into <anon>
+  Skipped Insertion (Dominance): %15 + 100 in <anon>
+  Skipped Insertion (Dominance): %15 + 100 in <anon>
+  Inserted:   %lcm.tmp3 = add i32 %1, %0 into <anon>
+  Skipped Insertion (Dominance): %15 + 100 in <anon>
+  Inserted:   %lcm.tmp4 = sub i32 %0, %1 into <anon>
+  Skipped Insertion (Dominance): %15 + 100 in <anon>
+  Inserted:   %lcm.tmp5 = mul i32 %1, %0 into <anon>
+  Skipped Insertion (Dominance): %15 + 100 in <anon>
+  Inserted:   %lcm.tmp6 = add i32 %15, 100 into <anon>
+LCM: Phase 1.5 - Checking for potential critical edge insertions...
+  Checking Block: <anon_block>
+    Block <anon_block> has multiple predecessors? No
+  Finished Checking Block: <anon_block>
+  Checking Block: <anon_block>
+    Block <anon_block> has multiple predecessors? No
+  Finished Checking Block: <anon_block>
+  Checking Block: <anon_block>
+    Block <anon_block> has multiple predecessors? No
+  Finished Checking Block: <anon_block>
+  Checking Block: <anon_block>
+    Block <anon_block> has multiple predecessors? No
+  Finished Checking Block: <anon_block>
+  Checking Block: <anon_block>
+    Block <anon_block> has multiple predecessors? No
+  Finished Checking Block: <anon_block>
+  Checking Block: <anon_block>
+    Block <anon_block> has multiple predecessors? Yes
+    AVAIL_IN : 
+    ANTIC_IN : %15 + 100
+      Checking Expr 0 [%1 + %0]: ANTIC=0, AVAIL=0
+      Checking Expr 1 [%0 - %1]: ANTIC=0, AVAIL=0
+      Checking Expr 2 [%1 * %0]: ANTIC=0, AVAIL=0
+      Checking Expr 3 [%15 + 100]: ANTIC=1, AVAIL=0
+        Heuristic PASSED for Expr 3 [%15 + 100]
+        Checking Predecessors:
+          Pred P: <anon_pred>
+            Pred P has multiple successors? No
+          Pred P: <anon_pred>
+            Pred P has multiple successors? No
+          Pred P: <anon_pred>
+            Pred P has multiple successors? No
+  Finished Checking Block: <anon_block>
+LCM: Phase 1.5 - Finished Checking.
+LCM: Phase 2 - Build Replacement Map...
+  Marking replacement:   %11 = sub nsw i32 %0, %1 ->   %lcm.tmp1 = sub i32 %0, %1
+  Marking replacement:   %9 = add nsw i32 %1, %0 ->   %lcm.tmp = add i32 %1, %0
+  Marking replacement:   %16 = add nsw i32 %15, 100 ->   %lcm.tmp6 = add i32 %15, 100
+  Marking replacement:   %13 = mul nsw i32 %1, %0 ->   %lcm.tmp2 = mul i32 %1, %0
+LCM: Phase 3 - Perform Replacements and Deletions...
+  Replacing operand 0 of:   %15 = phi i32 [ %9, %8 ], [ %11, %10 ], [ %13, %12 ] (%9 -> %lcm.tmp)
+  Replacing operand 1 of:   %15 = phi i32 [ %lcm.tmp, %8 ], [ %11, %10 ], [ %13, %12 ] (%11 -> %lcm.tmp1)
+  Replacing operand 2 of:   %15 = phi i32 [ %lcm.tmp, %8 ], [ %lcm.tmp1, %10 ], [ %13, %12 ] (%13 -> %lcm.tmp2)
+  Replacing operand 0 of:   ret i32 %16 (%16 -> %lcm.tmp6)
+  Deleting dead instructions...
+    Deleting:   %11 = sub nsw i32 %0, %1
+    Deleting:   %9 = add nsw i32 %1, %0
+    Deleting:   %14 = add nsw i32 %13, 100
+    Deleting:   %11 = mul nsw i32 %1, %0
+  Deleted 4 original instructions.
+vboxuser@ubuntu:~/Desktop/Vinodh_Punitha$ 
+
+

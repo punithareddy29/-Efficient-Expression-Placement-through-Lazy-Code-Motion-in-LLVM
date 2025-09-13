@@ -1,0 +1,37 @@
+# Make sure you are in your project's root directory (e.g., ~/Desktop/Vinodh_Punitha/)
+# And that Tests/test7.c contains the C code.
+# Also ensure your UnifiedPass.so is in ./build/
+
+# --- Generate -O0 (with mem2reg) version ---
+
+# 1. Compile test7.c to LLVM Bitcode (-O0, keep names, disable optnone)
+clang-17 -fno-discard-value-names -Xclang -disable-O0-optnone -O0 -emit-llvm -c Tests/test7.c -o Tests/test7.O0.no-optnone.bc
+
+# 2. Convert to SSA Form
+opt-17 -passes=mem2reg Tests/test7.O0.no-optnone.bc -o Tests/test7.mem2reg.bc
+
+# 3. Disassemble to Readable LLVM IR (.ll) - Baseline -O0
+llvm-dis-17 Tests/test7.mem2reg.bc -o Tests/test7.O0.mem2reg.ll
+
+# --- Generate -O1 (with mem2reg) version ---
+
+# 4. Compile test7.c to LLVM Bitcode with -O1 Optimizations
+clang-17 -O1 -emit-llvm -c Tests/test7.c -o Tests/test7.O1.bc
+
+# 5. Ensure SSA Form on the -O1 Output
+opt-17 -passes=mem2reg Tests/test7.O1.bc -o Tests/test7.O1.mem2reg.bc
+
+# 6. Disassemble to Readable LLVM IR (.ll) - Baseline -O1
+llvm-dis-17 Tests/test7.O1.mem2reg.bc -o Tests/test7.O1.mem2reg.ll
+
+# --- Apply Custom LCM Pass to BOTH versions ---
+
+# 7. Apply Custom LCM Pass to the -O0 (mem2reg) version
+echo "Running LCM on -O0 output..."
+opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test7.mem2reg.bc -o Tests/test7.O0.lcm-final.ll
+
+# 8. Apply Custom LCM Pass to the -O1 (mem2reg) version
+echo "Running LCM on -O1 output..."
+opt-17 -load-pass-plugin=./build/UnifiedPass.so -passes=lcm -S Tests/test7.O1.mem2reg.bc -o Tests/test7.O1.lcm-final.ll
+
+

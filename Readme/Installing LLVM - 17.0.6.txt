@@ -1,0 +1,49 @@
+=============================================================
+Step-by-Step: Install Prebuilt LLVM 17 to ~/llvm-project/build
+=============================================================
+
+# Download the key to a file first
+wget -O llvm-snapshot.gpg.key https://apt.llvm.org/llvm-snapshot.gpg.key
+
+# Add the key to your keyring (this will prompt for password normally)
+sudo apt-key add llvm-snapshot.gpg.key
+
+# Clean up the key file
+rm llvm-snapshot.gpg.key
+
+# Add LLVM repository for your Ubuntu version
+sudo add-apt-repository "deb http://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-17 main"
+
+# Update package lists
+sudo apt update
+
+# Install LLVM 17 tools and development packages
+sudo apt install -y llvm-17 llvm-17-dev clang-17 llvm-17-tools
+
+# Create symbolic links for easier access (optional but recommended)
+sudo ln -s /usr/bin/clang-17 /usr/local/bin/clang
+sudo ln -s /usr/bin/clang++-17 /usr/local/bin/clang++
+sudo ln -s /usr/bin/opt-17 /usr/local/bin/opt
+sudo ln -s /usr/bin/llvm-config-17 /usr/local/bin/llvm-config
+
+
+# Check if the tools are available
+which clang-17
+which opt-17
+which llvm-config-17
+
+# Verify versions
+clang-17 --version
+opt-17 --version
+llvm-config-17 --version
+
+You should see the clang version Like this.
+Ubuntu clang version 17.0.6 (++20231209124227+6009708b4367-1~exp1~20231209124336.77)
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /usr/bin
+Ubuntu LLVM version 17.0.6
+  Optimized build.
+  Default target: x86_64-pc-linux-gnu
+  Host CPU: tigerlake
+17.0.6
